@@ -453,7 +453,7 @@ class BackgroundMusicEngine {
       this.notify();
     });
 
-    // 9. Error Handler with Automatic Proxy & Resilient Ambient Melody Fallback
+    // 9. Error Handler
     this.audio.addEventListener('error', (e) => {
       console.warn('Audio element error event:', e);
       this.isLoading = false;
@@ -461,13 +461,10 @@ class BackgroundMusicEngine {
       const track = this.getCurrentTrack();
       const rawUrl = track.audioUrl || '';
 
-      // If external link failed and backend proxy is reachable (and not already proxied or dead blob)
-      if (rawUrl && !rawUrl.startsWith('/api/') && !rawUrl.startsWith('blob:') && this.retryCount === 0) {
+      // If external link failed and backend server has proxy
+      if (rawUrl && !rawUrl.startsWith('/api/') && !rawUrl.startsWith('blob:') && this.retryCount === 0 && hasBackendServer()) {
         this.retryCount = 1;
-        const apiBase = (typeof window !== 'undefined' && window.location.hostname.includes('github.io'))
-          ? 'https://ais-dev-7omy3nxbcenuidl2tgny3y-286439284546.asia-southeast1.run.app'
-          : '';
-        const proxyUrl = `${apiBase}/api/proxy-audio?url=${encodeURIComponent(rawUrl)}`;
+        const proxyUrl = buildApiUrl(`/api/proxy-audio?url=${encodeURIComponent(rawUrl)}`);
         console.log('Retrying audio playback through backend proxy:', proxyUrl);
         this.audio.src = proxyUrl;
         this.audio.load();
@@ -475,17 +472,24 @@ class BackgroundMusicEngine {
         return;
       }
 
-      // If still fails or dead blob from another device, fallback immediately to soothing ambient melody
-      if (this.retryCount <= 1) {
-        this.retryCount = 2;
-        console.log('Falling back to built-in ambient melody for track:', track.title);
-        this.currentSourceType = 'synth';
-        generateMelodyWavUrl(this.currentTrackIndex, 180).then((url) => {
-          this.audio.src = url;
-          this.audio.load();
-          this.audio.play().catch(() => {});
-          this.notify();
-        });
+      // Only fallback to synth melody if the track is explicitly a synth track or has no audioUrl
+      if (!rawUrl || track.sourceType === 'synth') {
+        if (this.retryCount <= 1) {
+          this.retryCount = 2;
+          console.log('Playing built-in ambient melody for synth track:', track.title);
+          this.currentSourceType = 'synth';
+          generateMelodyWavUrl(this.currentTrackIndex, 180).then((url) => {
+            this.audio.src = url;
+            this.audio.load();
+            this.audio.play().catch(() => {});
+            this.notify();
+          });
+        }
+      } else {
+        // Direct audio stream (e.g. Cloudinary) failed to load
+        console.warn(`[BGM] Could not load audio stream for track: "${track.title}" from URL:`, rawUrl);
+        this.isPlaying = false;
+        this.notify();
       }
     });
   }
@@ -586,16 +590,26 @@ class BackgroundMusicEngine {
   }
 
   public mergeTracks(remoteTracks: AudioTrack[]) {
+    if (!Array.isArray(remoteTracks) || remoteTracks.length === 0) return;
+
+    // Use remoteTracks from author/GitHub as authoritative list
     const map = new Map<string, AudioTrack>();
-    DEFAULT_TRACK_LIST.forEach((t) => map.set(t.id, t));
-    this.tracks.forEach((t) => map.set(t.id, t));
     remoteTracks.forEach((t) => map.set(t.id, t));
 
+    // Keep any user-added custom tracks that exist locally and aren't default synth tracks
+    this.tracks.forEach((t) => {
+      if (!map.has(t.id) && t.sourceType !== 'synth') {
+        map.set(t.id, t);
+      }
+    });
+
     const list = Array.from(map.values());
-    this.tracks = list;
-    TRACK_LIST = list;
-    this.saveTracksToStorage();
-    this.notify();
+    if (list.length > 0) {
+      this.tracks = list;
+      TRACK_LIST = list;
+      this.saveTracksToStorage();
+      this.notify();
+    }
   }
 
   public handleServerTrackEvent(type: string, payload: any) {
@@ -793,7 +807,11 @@ class BackgroundMusicEngine {
     // 8. Direct HTTP/HTTPS audio stream
     if (rawUrl.startsWith('http://') || rawUrl.startsWith('https://')) {
       this.currentSourceType = 'direct';
-      return rawUrl;
+      try {
+        return encodeURI(decodeURI(rawUrl));
+      } catch {
+        return rawUrl;
+      }
     }
 
     // 9. Built-in sweet ambient piano melody -> generated to WAV Blob URL

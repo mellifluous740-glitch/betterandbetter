@@ -1,34 +1,13 @@
 [
   {
-    "id": "track-1",
-    "title": "Gió Thổi Mùa Hạ (夏天的风)",
-    "artist": "Mellifluous Lofi Chill",
-    "duration": "03:45",
-    "mood": "Rhodes Piano & Gió mùa hạ",
-    "sourceType": "synth"
-  },
-  {
-    "id": "track-2",
-    "title": "Mùa Hè Năm Ấy (那年夏天)",
-    "artist": "Acoustic Piano & Music Box",
-    "duration": "04:12",
-    "mood": "Tiếng đàn êm dịu tuổi thanh xuân",
-    "sourceType": "synth"
-  },
-  {
-    "id": "track-3",
-    "title": "Tớ Thích Cậu (我喜欢你)",
-    "artist": "Sweet Warm Chords",
+    "title": "Ghibli Music",
+    "artist": "N/A",
+    "audioUrl": "https://res.cloudinary.com/bky0ay9a/video/upload/v1789710505/Ghibli_Piano_Collection_Relaxing_Piano_Music_-_Studying_Coffee_Reading_Healing_-_Ghibli_Music_-_64_Kbps.mp3",
+    "mood": "Thư giãn",
     "duration": "03:30",
-    "mood": "Giai điệu ngọt ngào chữa lành",
-    "sourceType": "synth"
-  },
-  {
-    "id": "track-4",
-    "title": "Ký Ức Mùa Mưa Rào",
-    "artist": "Ambient Rain & Chimes",
-    "duration": "02:58",
-    "mood": "Chuông gió & giọt mưa tí tách",
-    "sourceType": "synth"
+    "addedBy": "Tác giả",
+    "id": "track-1789710638111-ru4m",
+    "createdAt": "2026-09-18T05:50:38.111Z",
+    "sourceType": "direct"
   }
 ]
