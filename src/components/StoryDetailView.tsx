@@ -395,7 +395,7 @@ export const StoryDetailView: React.FC<StoryDetailViewProps> = ({
                   }`}
                 >
                   {isCompleted ? <CheckCircle className="w-3.5 h-3.5" /> : <Clock className="w-3.5 h-3.5" />}
-                  <span>{isCompleted ? 'Full (HE)' : 'Đang tiến hành'}</span>
+                  <span>{isCompleted ? 'Đã hoàn thành' : 'Đang tiến hành'}</span>
                 </span>
                 {extraChapters.length > 0 && (
                   <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-rose-500/90 text-white backdrop-blur-md shadow-xs">
