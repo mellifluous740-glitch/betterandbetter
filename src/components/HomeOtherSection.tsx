@@ -121,7 +121,7 @@ export const HomeOtherSection: React.FC<HomeOtherSectionProps> = ({ onGoToOtherP
               <span>Hòm thư yêu thương • Playlist âm nhạc & Góc nhỏ Mel</span>
             </div>
             <h2 className="font-serif text-xl sm:text-2xl font-bold text-stone-800 dark:text-stone-100">
-              Một Số Mục Khác: Tâm Sự & Nhạc Hè
+              Vào đây chilling cùng Mell nhaaaa
             </h2>
           </div>
         </div>
@@ -148,7 +148,7 @@ export const HomeOtherSection: React.FC<HomeOtherSectionProps> = ({ onGoToOtherP
               <div className="flex items-center gap-2">
                 <Music className="w-4 h-4 text-sky-500 animate-spin" style={{ animationDuration: '6s' }} />
                 <span className="font-serif text-xs font-bold text-stone-800 dark:text-stone-200">
-                  Giai điệu mùa hạ 🎐
+                  Âm nhạc 🎐
                 </span>
               </div>
               <span className="text-[10px] px-2 py-0.5 rounded-full bg-sky-100 dark:bg-sky-950 text-sky-700 dark:text-sky-300 font-medium">
@@ -205,13 +205,13 @@ export const HomeOtherSection: React.FC<HomeOtherSectionProps> = ({ onGoToOtherP
               <textarea
                 value={message}
                 onChange={(e) => setMessage(e.target.value)}
-                placeholder="Gửi một chút ngọt ngào hay lời chúc đến chiếc thuyền nhỏ..."
+                placeholder="Những lời muốn nói..."
                 rows={2}
                 className="w-full px-3 py-2 rounded-xl bg-stone-50 dark:bg-stone-900 border border-stone-200 dark:border-stone-700 text-xs text-stone-800 dark:text-stone-200 focus:outline-hidden focus:ring-1 focus:ring-sky-400 resize-none"
               />
               <div className="flex items-center justify-between">
                 <span className="text-[10px] text-stone-400">
-                  {isSentSuccess ? '🌸 Đã gửi lá thư ngọt ngào!' : 'Thư sẽ xuất hiện ngay phía bên cạnh'}
+                  {isSentSuccess ? '🌸 Đã gửi lời nhắn!' : 'Thư sẽ xuất hiện ngay phía bên cạnh'}
                 </span>
                 <button
                   type="submit"
@@ -229,7 +229,7 @@ export const HomeOtherSection: React.FC<HomeOtherSectionProps> = ({ onGoToOtherP
         {/* Right Col (7 cols): Recent Public Letters List */}
         <div className="lg:col-span-7 space-y-3">
           <div className="flex items-center justify-between text-xs font-semibold text-stone-600 dark:text-stone-400">
-            <span>Hòm thư bạn đọc gần đây:</span>
+            <span>Hòm thư công khai gần đây:</span>
             <span className="text-[11px] text-sky-600 dark:text-sky-400">
               {letters.length} lá thư
             </span>
