@@ -41,7 +41,7 @@ import {
   getStoryChapters,
   ANNOUNCEMENTS,
 } from '../../data/mockData';
-import { getStoredStories } from '../../lib/realtimeService';
+import { getStoredStories, syncAllLocalToFirestore } from '../../lib/realtimeService';
 import {
   isFirestoreEnabled,
   setFirestoreEnabled,
@@ -89,11 +89,36 @@ export const AuthorSyncTab: React.FC<AuthorSyncTabProps> = ({ onFeedback, onRefr
 
   // Firestore state
   const [firestoreActive, setFirestoreActive] = useState<boolean>(() => isFirestoreEnabled());
+  const [isSyncingFirestore, setIsSyncingFirestore] = useState(false);
 
   // Action loading states
   const [isSyncingToGithub, setIsSyncingToGithub] = useState(false);
   const [isPullingFromGithub, setIsPullingFromGithub] = useState(false);
   const [isRestoringFile, setIsRestoringFile] = useState(false);
+
+  // Sync All Local Data to Firestore handler
+  const handleSyncAllToFirestore = async () => {
+    setIsSyncingFirestore(true);
+    try {
+      const res = await syncAllLocalToFirestore();
+      if (res.success) {
+        setFirestoreActive(true);
+        onFeedback(
+          'success',
+          `Đã đồng bộ thành công ${res.storiesCount} tác phẩm, ${res.chaptersCount} chương và ${res.announcementsCount} thông báo lên Firestore!`
+        );
+      } else {
+        onFeedback(
+          'error',
+          `Đồng bộ Firestore chưa hoàn tất (${res.error}). Quota Google hôm nay có thể chưa mở lại.`
+        );
+      }
+    } catch {
+      onFeedback('error', 'Lỗi khi gửi dữ liệu lên Firestore.');
+    } finally {
+      setIsSyncingFirestore(false);
+    }
+  };
 
   // Auto-persist GitHub config whenever user edits input fields
   useEffect(() => {
@@ -414,7 +439,16 @@ export const AuthorSyncTab: React.FC<AuthorSyncTabProps> = ({ onFeedback, onRefr
             </p>
           </div>
           <div className="pt-2 border-t border-stone-100 dark:border-stone-800 flex flex-wrap items-center justify-between gap-2 text-[11px] text-stone-600 dark:text-stone-400">
-            <div className="flex items-center gap-3">
+            <div className="flex flex-wrap items-center gap-2.5">
+              <button
+                type="button"
+                disabled={isSyncingFirestore}
+                onClick={handleSyncAllToFirestore}
+                className="px-2.5 py-1 rounded-lg bg-amber-500 hover:bg-amber-600 text-white font-medium cursor-pointer transition-colors inline-flex items-center gap-1.5 disabled:opacity-50 shadow-2xs text-[11px]"
+              >
+                <RefreshCw className={`w-3 h-3 ${isSyncingFirestore ? 'animate-spin' : ''}`} />
+                <span>{isSyncingFirestore ? 'Đang đẩy lên mây...' : 'Đẩy toàn bộ lên Firestore'}</span>
+              </button>
               <button
                 type="button"
                 onClick={() => {

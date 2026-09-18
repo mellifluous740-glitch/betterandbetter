@@ -19,6 +19,8 @@ import {
   arrayRemove,
   isFirestoreQuotaExhausted,
   checkAndHandleQuotaError,
+  resetFirestoreQuotaExhaustion,
+  setFirestoreEnabled,
 } from './firebase';
 import { GlobalRealtimeStats, StoryRealtimeStats, RealtimeComment, Story, Chapter, Announcement, ReaderLetter, CommentReply, CollaboratorItem, UserProfile } from '../types';
 export type { ReaderLetter, RealtimeComment, CommentReply, GlobalRealtimeStats, StoryRealtimeStats, CollaboratorItem, UserProfile };
@@ -4364,5 +4366,82 @@ export const saveUserAccount = async (account: StoredUserAccount): Promise<void>
     await registerUsernameMapping(account.username, account.email, account.uid);
   }
 };
+
+/**
+ * Manually or automatically push all locally stored Stories, Chapters, and Announcements
+ * to Firestore. Used when Firestore free daily quota resets or reconnects.
+ */
+export const syncAllLocalToFirestore = async (): Promise<{
+  success: boolean;
+  storiesCount: number;
+  chaptersCount: number;
+  announcementsCount: number;
+  error?: string;
+}> => {
+  resetFirestoreQuotaExhaustion();
+  setFirestoreEnabled(true);
+
+  const stories = getStoredStories();
+  const rawChapters = getLiveChaptersRuntimeCache();
+  const announcements = getStoredAnnouncements();
+
+  let storiesCount = 0;
+  let chaptersCount = 0;
+  let announcementsCount = 0;
+
+  try {
+    // 1. Sync all stories
+    for (const story of stories) {
+      const fullStoryData = sanitizeForFirestore({
+        ...story,
+        storyId: story.id,
+        deleted: false,
+        updatedAt: story.updatedAt || new Date().toISOString(),
+      });
+      await setDoc(doc(db, 'story_stats', story.id), fullStoryData, { merge: true });
+      await setDoc(doc(db, 'stories', story.id), fullStoryData, { merge: true }).catch(() => {});
+      storiesCount++;
+    }
+
+    // 2. Sync all chapters
+    for (const story of stories) {
+      const chList = rawChapters[story.id] || getStoryChapters(story.id) || [];
+      for (const ch of chList) {
+        const fullChapterData = sanitizeForFirestore({
+          ...ch,
+          chapterId: ch.id,
+          deleted: false,
+          updatedAt: new Date().toISOString(),
+        });
+        await setDoc(doc(db, 'chapter_stats', ch.id), fullChapterData, { merge: true });
+        await setDoc(doc(db, 'chapters', ch.id), fullChapterData, { merge: true }).catch(() => {});
+        chaptersCount++;
+      }
+    }
+
+    // 3. Sync all announcements
+    for (const ann of announcements) {
+      await setDoc(doc(db, 'announcements', ann.id), sanitizeForFirestore(ann), { merge: true });
+      announcementsCount++;
+    }
+
+    return {
+      success: true,
+      storiesCount,
+      chaptersCount,
+      announcementsCount,
+    };
+  } catch (err: any) {
+    console.warn('Sync all to Firestore error:', err);
+    return {
+      success: false,
+      storiesCount,
+      chaptersCount,
+      announcementsCount,
+      error: err?.message || 'Lỗi đồng bộ Firestore',
+    };
+  }
+};
+
 
 
