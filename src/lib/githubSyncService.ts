@@ -34,7 +34,8 @@ export const resolveAuthoritativeRepo = (): string => {
           parsed.repo &&
           typeof parsed.repo === 'string' &&
           parsed.repo.trim() &&
-          !parsed.repo.includes('maianhpham927-glitch')
+          !parsed.repo.includes('maianhpham927-glitch') &&
+          parsed.repo.trim() !== 'mellifluous740/betterandbetter'
         ) {
           return parsed.repo.trim();
         }
@@ -46,6 +47,9 @@ export const resolveAuthoritativeRepo = (): string => {
       const owner = window.location.hostname.replace('.github.io', '');
       const pathParts = window.location.pathname.split('/').filter(Boolean);
       const repoName = pathParts[0] || 'betterandbetter';
+      if (owner === 'mellifluous740' || owner === 'mellifluous740-glitch') {
+        return 'mellifluous740-glitch/betterandbetter';
+      }
       return `${owner}/${repoName}`;
     }
   }
@@ -65,47 +69,65 @@ export const getGithubConfig = (): GithubConfig => {
     };
   }
 
+  const rawAutoSync = localStorage.getItem('mel_github_autosync');
+  const token = localStorage.getItem('mel_github_token') || '';
+
   try {
     const raw = localStorage.getItem(STORAGE_CONFIG_KEY);
     if (raw) {
       const parsed = JSON.parse(raw);
       // Clean up legacy obsolete placeholder if found
       const finalRepo =
-        parsed.repo && !parsed.repo.includes('maianhpham927-glitch')
+        parsed.repo &&
+        !parsed.repo.includes('maianhpham927-glitch') &&
+        parsed.repo.trim() !== 'mellifluous740/betterandbetter'
           ? parsed.repo.trim()
           : effectiveRepo;
+
+      const finalAutoSync =
+        parsed.autoSync !== undefined
+          ? Boolean(parsed.autoSync)
+          : rawAutoSync !== null
+          ? rawAutoSync === 'true'
+          : true;
 
       return {
         repo: finalRepo,
         branch: parsed.branch || DEFAULT_BRANCH,
-        token: parsed.token || localStorage.getItem('mel_github_token') || '',
-        autoSync: parsed.autoSync !== false,
+        token: parsed.token || token,
+        autoSync: finalAutoSync,
         lastSyncTime: parsed.lastSyncTime,
       };
     }
   } catch {}
 
-  const token = localStorage.getItem('mel_github_token') || '';
   return {
     repo: effectiveRepo,
     branch: DEFAULT_BRANCH,
     token,
-    autoSync: true,
+    autoSync: rawAutoSync !== null ? rawAutoSync === 'true' : true,
   };
 };
 
 export const saveGithubConfig = (config: Partial<GithubConfig>): GithubConfig => {
   const current = getGithubConfig();
+  let targetRepo = (config.repo || current.repo || DEFAULT_REPO).trim();
+  if (targetRepo === 'mellifluous740/betterandbetter' || targetRepo.includes('maianhpham927-glitch')) {
+    targetRepo = DEFAULT_REPO;
+  }
+
   const updated: GithubConfig = {
     ...current,
     ...config,
-    repo: (config.repo || current.repo || DEFAULT_REPO).trim(),
+    repo: targetRepo,
     branch: (config.branch || current.branch || DEFAULT_BRANCH).trim(),
     token: config.token !== undefined ? config.token.trim() : current.token,
+    autoSync: config.autoSync !== undefined ? Boolean(config.autoSync) : current.autoSync !== false,
   };
 
   try {
     localStorage.setItem(STORAGE_CONFIG_KEY, JSON.stringify(updated));
+    localStorage.setItem('mel_github_autosync', updated.autoSync ? 'true' : 'false');
     if (updated.token) {
       localStorage.setItem('mel_github_token', updated.token);
     } else {
@@ -169,55 +191,65 @@ export async function fetchRawGithubJson<T>(filename: string): Promise<T | null>
 
   // Add cache buster to guarantee freshest data on every fetch
   const cacheBuster = Date.now();
-  const url = `https://raw.githubusercontent.com/${repo}/${branch}/data/${filename}?_t=${cacheBuster}`;
+  const candidateRepos = [repo];
+  if (repo !== DEFAULT_REPO) {
+    candidateRepos.push(DEFAULT_REPO);
+  }
 
-  try {
-    const res = await fetch(url, {
-      headers: {
-        Accept: 'application/json',
-      },
-      cache: 'no-store',
-    });
+  for (const r of candidateRepos) {
+    const url = `https://raw.githubusercontent.com/${r}/${branch}/data/${filename}?_t=${cacheBuster}`;
+    try {
+      const res = await fetch(url, {
+        headers: {
+          Accept: 'application/json',
+        },
+        cache: 'no-store',
+      });
 
-    if (res.ok) {
-      const data = await res.json();
-      return data as T;
+      if (res.ok) {
+        const data = await res.json();
+        return data as T;
+      }
+    } catch (err) {
+      console.warn(`[GitHubSync] Could not fetch raw ${filename} from ${r}:`, err);
     }
-  } catch (err) {
-    console.warn(`[GitHubSync] Could not fetch raw ${filename} from GitHub:`, err);
   }
 
   // Fallback 1: Direct GitHub Contents API (works publicly for open repos, with or without token)
-  try {
-    const apiUrl = `https://api.github.com/repos/${repo}/contents/data/${filename}?ref=${encodeURIComponent(branch)}&_t=${cacheBuster}`;
-    const headers: Record<string, string> = {
-      Accept: 'application/vnd.github+json',
-      'X-GitHub-Api-Version': '2022-11-28',
-    };
-    if (config.token) {
-      headers.Authorization = `Bearer ${config.token.trim()}`;
-    }
-    const apiRes = await fetch(apiUrl, {
-      headers,
-      cache: 'no-store',
-    });
-    if (apiRes.ok) {
-      const fileObj = await apiRes.json();
-      if (fileObj.content) {
-        const decoded = base64ToUtf8(fileObj.content);
-        return JSON.parse(decoded) as T;
+  for (const r of candidateRepos) {
+    try {
+      const apiUrl = `https://api.github.com/repos/${r}/contents/data/${filename}?ref=${encodeURIComponent(branch)}&_t=${cacheBuster}`;
+      const headers: Record<string, string> = {
+        Accept: 'application/vnd.github+json',
+        'X-GitHub-Api-Version': '2022-11-28',
+      };
+      if (config.token) {
+        headers.Authorization = `Bearer ${config.token.trim()}`;
       }
-    }
-  } catch {}
+      const apiRes = await fetch(apiUrl, {
+        headers,
+        cache: 'no-store',
+      });
+      if (apiRes.ok) {
+        const fileObj = await apiRes.json();
+        if (fileObj.content) {
+          const decoded = base64ToUtf8(fileObj.content);
+          return JSON.parse(decoded) as T;
+        }
+      }
+    } catch {}
+  }
 
   // Fallback 2: jsDelivr CDN
-  try {
-    const cdnUrl = `https://cdn.jsdelivr.net/gh/${repo}@${branch}/data/${filename}?_t=${cacheBuster}`;
-    const cdnRes = await fetch(cdnUrl, { cache: 'no-store' });
-    if (cdnRes.ok) {
-      return await cdnRes.json();
-    }
-  } catch {}
+  for (const r of candidateRepos) {
+    try {
+      const cdnUrl = `https://cdn.jsdelivr.net/gh/${r}@${branch}/data/${filename}?_t=${cacheBuster}`;
+      const cdnRes = await fetch(cdnUrl, { cache: 'no-store' });
+      if (cdnRes.ok) {
+        return await cdnRes.json();
+      }
+    } catch {}
+  }
 
   // Fallback 3: Local /data/ or relative base path in deployed build (e.g. GitHub Pages)
   try {

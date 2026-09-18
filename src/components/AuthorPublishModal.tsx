@@ -43,6 +43,7 @@ import {
   deleteReaderLetter,
   resetAllMetricsToZero,
 } from '../lib/realtimeService';
+import { getGithubConfig, saveGithubConfig, type GithubConfig } from '../lib/githubSyncService';
 import { useAuth } from '../lib/authContext';
 import { AuthorMusicTab } from './author/AuthorMusicTab';
 import { AuthorEditStoryTab } from './author/AuthorEditStoryTab';
@@ -109,6 +110,15 @@ export const AuthorPublishModal: React.FC<AuthorPublishModalProps> = ({
   const [activeTab, setActiveTab] = useState<TabType>('newStory');
   const [isProcessing, setIsProcessing] = useState(false);
   const [feedbackMessage, setFeedbackMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+
+  // GitHub AutoSync State
+  const [ghConfig, setGhConfig] = useState<GithubConfig>(() => getGithubConfig());
+
+  useEffect(() => {
+    if (isOpen) {
+      setGhConfig(getGithubConfig());
+    }
+  }, [isOpen, activeTab]);
 
   // Dynamic Genres
   const [availableGenres, setAvailableGenres] = useState<string[]>(() => getCustomGenres());
@@ -713,6 +723,56 @@ export const AuthorPublishModal: React.FC<AuthorPublishModalProps> = ({
         {/* ========================================================= */}
         <div className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 space-y-6 custom-scrollbar min-h-0">
           
+          {/* Live GitHub Auto-Sync Status Bar for Authors */}
+          {(activeTab === 'newStory' || activeTab === 'editStory' || activeTab === 'newChapter' || activeTab === 'editChapter' || activeTab === 'manage') && (
+            <div className="flex flex-wrap items-center justify-between gap-2.5 px-3.5 py-2.5 rounded-2xl bg-stone-50 dark:bg-stone-800/80 border border-stone-200 dark:border-stone-700 text-xs shadow-xs">
+              <div className="flex items-center gap-2">
+                <span className={`w-2.5 h-2.5 rounded-full shrink-0 ${ghConfig.token ? (ghConfig.autoSync ? 'bg-emerald-500 animate-pulse ring-2 ring-emerald-300' : 'bg-amber-500 ring-2 ring-amber-300') : 'bg-stone-400'}`} />
+                <span className="font-medium text-stone-700 dark:text-stone-300">
+                  {ghConfig.token ? (
+                    <>
+                      Tự động commit GitHub:{' '}
+                      <strong className={ghConfig.autoSync ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-600 dark:text-amber-400'}>
+                        {ghConfig.autoSync ? 'ĐANG BẬT' : 'ĐANG TẮT'}
+                      </strong>
+                      <span className="opacity-75 font-mono ml-1 hidden sm:inline">({ghConfig.repo})</span>
+                    </>
+                  ) : (
+                    <span className="text-amber-700 dark:text-amber-300 font-medium">
+                      ⚠️ Chưa cấu hình GitHub Token (truyện & chương sẽ chỉ lưu máy cục bộ, chưa thể tự động commit lên GitHub)
+                    </span>
+                  )}
+                </span>
+              </div>
+              <div className="flex items-center gap-2 shrink-0">
+                {ghConfig.token && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const updated = saveGithubConfig({ autoSync: !ghConfig.autoSync });
+                      setGhConfig(updated);
+                      showFeedback('success', `Đã ${updated.autoSync ? 'BẬT' : 'TẮT'} tự động commit lên GitHub khi xuất bản!`);
+                    }}
+                    className={`px-2.5 py-1 rounded-lg font-semibold transition-colors cursor-pointer text-[11px] ${
+                      ghConfig.autoSync
+                        ? 'bg-emerald-100 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-200'
+                        : 'bg-amber-100 dark:bg-amber-950/50 text-amber-700 dark:text-amber-300 hover:bg-amber-200'
+                    }`}
+                  >
+                    {ghConfig.autoSync ? '✓ Tự động commit: BẬT' : '✕ Tự động commit: TẮT'}
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('sync')}
+                  className="px-2.5 py-1 rounded-lg bg-pink-100/70 dark:bg-pink-950/40 text-pink-700 dark:text-pink-300 font-bold hover:bg-pink-200 transition-colors cursor-pointer text-[11px]"
+                >
+                  {ghConfig.token ? '⚙️ Cài đặt đồng bộ' : '🔑 Nhập Token GitHub ngay'}
+                </button>
+              </div>
+            </div>
+          )}
+
           {/* TAB 1: ĐĂNG TRUYỆN MỚI */}
           {activeTab === 'newStory' && (
             <form onSubmit={handleCreateStory} className="space-y-4">

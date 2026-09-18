@@ -309,6 +309,25 @@ const reloadCommentsIfChanged = () => {
 
 // Initialize or load all entities
 export const initDataStore = () => {
+  // Mirror all authoritative files in /data/ to /public/data/ for static serving & builds
+  const syncPublic = (src: string, name: string) => {
+    try {
+      if (fs.existsSync(src)) {
+        const destDir = path.join(process.cwd(), 'public', 'data');
+        if (!fs.existsSync(destDir)) fs.mkdirSync(destDir, { recursive: true });
+        fs.copyFileSync(src, path.join(destDir, name));
+      }
+    } catch {}
+  };
+  syncPublic(STORIES_FILE, 'stories.json');
+  syncPublic(CHAPTERS_FILE, 'chapters.json');
+  syncPublic(ANNOUNCEMENTS_FILE, 'announcements.json');
+  syncPublic(PLAYLIST_FILE, 'playlist.json');
+  syncPublic(LETTERS_FILE, 'letters.json');
+  syncPublic(COMMENTS_FILE, 'comments.json');
+  syncPublic(GENRES_FILE, 'genres.json');
+  syncPublic(STATS_FILE, 'stats.json');
+
   // 1. Stories
   if (fs.existsSync(STORIES_FILE)) {
     try {
