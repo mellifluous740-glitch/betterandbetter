@@ -90,26 +90,26 @@ export const PasswordPage: React.FC<PasswordPageProps> = ({ stories, onOpenStory
         {[
           {
             num: '01',
-            title: 'Viết thường',
-            desc: 'Tất cả pass đều viết thường, không bật CapsLock (trừ khi có ghi chú đặc biệt).',
+            title: 'Không chia sẻ hay public password',
+            desc: 'Mong mọi người không share password ra ngoài, pass siêu dễ lấy nên mình bí mật với nhau thui nha.',
             icon: 'abc',
           },
           {
             num: '02',
-            title: 'Không dấu',
-            desc: 'Viết tiếng Việt không dấu (ví dụ: "hoa anh đào" -> "hoa anh dao").',
+            title: 'Password đặc biệt',
+            desc: 'Để lấy password, mọi người vui lòng ủng hộ tác giả với giá trị tương đương khi mua tác phẩm gốc. Lưu ý MÌNH KHÔNG NHẬN NẠP HỘ. Các truyện có pass đặc biệt tớ đã note kỹ trong giới thiệu truyện.',
             icon: '🌸',
           },
           {
             num: '03',
-            title: 'Không dấu cách',
-            desc: 'Nếu câu trả lời có nhiều từ, hãy viết liền không dấu cách (vd: "muahenamay").',
+            title: 'Hỏi về Pass',
+            desc: 'Chỉ chấp nhận comment, tin nhắn hỏi về pass một cách lịch sự. Ngoài ra mật khẩu không khó, mọi người không hỏi khi không cần thiết nhaa.',
             icon: '✏️',
           },
           {
             num: '04',
-            title: 'Đọc kỹ văn án & C.1',
-            desc: '90% câu trả lời đều nằm ngay ở tên trường học, tên món đồ kỷ niệm của 2 nhân vật chính.',
+            title: 'Cách set pass',
+            desc: 'Với các truyện trả phí, tớ sẽ set pass từ chương VIP trở đi, các truyện miễn phí tớ sẽ set pass ngoại truyện và các chương ngẫu nhiên.',
             icon: '📖',
           },
         ].map((rule) => (
