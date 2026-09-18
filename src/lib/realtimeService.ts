@@ -319,6 +319,12 @@ export const LEGACY_MOCK_STORY_IDS = new Set([
   'buc-thu-tinh-gui-may-troi',
   'chiec-o-thang-bay',
   'duoi-tan-cay-mua-ha',
+  'chao-tiep-ha',
+  'jjjjjjjj',
+  'nua-ne',
+  'huhu-sao-ko-c',
+  'kha-ha',
+  'nhgdcvjswhj',
 ]);
 
 // In-memory & local-storage state helpers hoisted for immediate accessibility
@@ -328,14 +334,14 @@ export const getStoredStories = (): Story[] => {
     if (raw) {
       const parsed = JSON.parse(raw);
       if (Array.isArray(parsed) && parsed.length > 0) {
-        const filtered = parsed.filter((s) => !isStoryDeleted(s.id));
+        const filtered = parsed.filter((s) => !isStoryDeleted(s.id) && !LEGACY_MOCK_STORY_IDS.has(s.id));
         if (filtered.length > 0) {
           return filtered;
         }
       }
     }
   } catch {}
-  return STORIES.filter((s) => !isStoryDeleted(s.id));
+  return STORIES.filter((s) => !isStoryDeleted(s.id) && !LEGACY_MOCK_STORY_IDS.has(s.id));
 };
 
 export const getStoredAnnouncements = (): Announcement[] => {
@@ -2430,19 +2436,13 @@ export const subscribeToPublishedStories = (
         const cleanIncoming = incoming.filter((s) => !localDel.has(s.id) && !LEGACY_MOCK_STORY_IDS.has(s.id));
         if (cleanIncoming.length === 0 && current.length === 0) return;
 
-        // Merge: retain all valid local author-created stories not yet on remote, and merge remote updates
+        // Authoritative remote merge:
         const mergedMap = new Map<string, Story>();
+        const incomingIds = new Set(cleanIncoming.map((s) => s.id));
 
-        // 1. Seed with local stored stories (so newly published local stories are NEVER dropped)
-        for (const s of current) {
-          if (!localDel.has(s.id) && !LEGACY_MOCK_STORY_IDS.has(s.id)) {
-            mergedMap.set(s.id, s);
-          }
-        }
-
-        // 2. Merge incoming remote stories with smart timestamp resolution
+        // 1. Authoritative incoming stories from Server/GitHub
         for (const inc of cleanIncoming) {
-          const existing = mergedMap.get(inc.id);
+          const existing = currentMap.get(inc.id);
           if (!existing) {
             mergedMap.set(inc.id, inc);
           } else {
@@ -2450,7 +2450,6 @@ export const subscribeToPublishedStories = (
             const incTime = parseSafeTimestamp(inc.updatedAt);
 
             if (existingTime > incTime && incTime > 0) {
-              // Local version is newer (author just edited it), preserve local edits while taking max metrics
               mergedMap.set(inc.id, {
                 ...inc,
                 ...existing,
@@ -2459,7 +2458,6 @@ export const subscribeToPublishedStories = (
                 completedChapters: Math.max(Number(existing.completedChapters) || 0, Number(inc.completedChapters) || 0),
               });
             } else {
-              // Remote version is newer or equal
               mergedMap.set(inc.id, {
                 ...existing,
                 ...inc,
@@ -2467,6 +2465,25 @@ export const subscribeToPublishedStories = (
                 likes: Math.max(Number(existing.likes) || 0, Number(inc.likes) || 0),
                 completedChapters: Math.max(Number(existing.completedChapters) || 0, Number(inc.completedChapters) || 0),
               });
+            }
+          }
+        }
+
+        // 2. Handle stories that exist only in local storage
+        for (const s of current) {
+          if (!incomingIds.has(s.id)) {
+            if (localDel.has(s.id) || LEGACY_MOCK_STORY_IDS.has(s.id)) {
+              continue;
+            }
+            const sTime = parseSafeTimestamp(s.updatedAt);
+            const isFreshLocalCreation = sTime > 0 && (Date.now() - sTime) < 15 * 60 * 1000;
+            if (isFreshLocalCreation) {
+              // Newly created story locally that hasn't finished pushing yet
+              mergedMap.set(s.id, s);
+            } else {
+              // It was deleted on remote! Purge it from this browser
+              localDel.add(s.id);
+              recordStoryDeleted(s.id);
             }
           }
         }

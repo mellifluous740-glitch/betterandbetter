@@ -58,24 +58,26 @@ export const recordStoryDeleted = (storyId: string): void => {
 
 export const STORIES: Story[] = [
   {
-    id: 'chao-tiep-ha',
-    title: 'chào tiếp ha',
+    id: 'huong-dan-lang-phi-tinh-yeu',
+    title: 'Hướng dẫn lãng phí tình yêu',
     originalTitle: '',
-    author: 'hees loooo',
+    author: 'Quy Ngư',
     translator: 'Mellifluous',
     status: 'ongoing',
-    genre: ['Học đường', 'Gương vỡ lại lành'],
-    summary: 'nj',
-    totalChapters: 30,
+    genre: ['Ngôn tình', 'Hiện đại', 'Đô thị', 'Yêu thầm', 'Trưởng thành', 'Chậm rãi'],
+    summary:
+      'Sau này, mỗi lần nghĩ đến núi Phú Sĩ, điều đầu tiên hiện lên trong tâm trí không phải là tuyết, không phải Trần Dịch Tấn, cũng chẳng phải bức tranh 《Sóng lừng ngoài khơi Kanagawa》, mà là đôi mắt ngập tràn vẻ ngái ngủ ấy.\n\nThật muốn nghe anh nói một câu, vĩnh hằng không phải là điều bất khả thi.\n\n\nVài lời\n\n1. Thiên về dòng tình cảm thuần túy, không có nhiều tuyến cốt truyện, văn phong có chút sến sẩm.\n\n2. Nhân vật không hoàn hảo, tuyến tình cảm của nữ chính rất sâu sắc, tuyến tình cảm của nam 9 hơi nhạt nhòa. Cảm giác nu9 sâu đậm hơn còn na9 thì khá thờ ơ.\n\n3. Chính văn OE, ngoại truyện HE, xin hãy nhìn nhận chính văn và ngoại truyện một cách độc lập.\n\n4. Tình dục và tình yêu\n\nBẢN DỊCH CÓ SỰ CHO PHÉP CỦA TÁC GIẢ VỚI MỤC ĐÍCH PHI LỢI NHUẬN',
+    totalChapters: 66,
     completedChapters: 0,
-    mainChaptersCount: 30,
+    mainChaptersCount: 66,
     extraChaptersCount: 0,
-    coverImage: 'https://images.unsplash.com/photo-1522383225653-ed111181a951?q=80&w=800&auto=format&fit=crop',
+    coverImage:
+      'https://betterthanyesterday027.wordpress.com/wp-content/uploads/2026/08/219fc72b-740d-497d-81dd-79fe1b285e48-1-edited.png',
     colorTheme: 'from-pink-100 to-rose-200 dark:from-pink-950/40 dark:to-rose-900/40',
     hasPassword: false,
     passwordHint: '',
     passwordKey: '',
-    updatedAt: '2026-09-17T14:32:22.973Z',
+    updatedAt: '2026-09-18T06:07:23.123Z',
     views: 0,
     likes: 0,
     featured: true,
@@ -83,7 +85,7 @@ export const STORIES: Story[] = [
 ];
 
 export const SAMPLE_CHAPTERS: Record<string, Chapter[]> = {
-  'chao-tiep-ha': [],
+  'huong-dan-lang-phi-tinh-yeu': [],
 };
 
 /**
