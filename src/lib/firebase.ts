@@ -93,10 +93,10 @@ export const isFirestoreEnabled = (): boolean => {
   if (typeof window === 'undefined') return false;
   try {
     const saved = localStorage.getItem('mel_firestore_enabled');
-    // Default to false: 100% Server Engine (Node.js Express + SSE + JSON store), zero quota limits, ultra fast!
-    return saved === 'true';
+    // Default to true so Firestore is active out-of-the-box unless user explicitly turns it off ('false')
+    return saved !== 'false';
   } catch {
-    return false;
+    return true;
   }
 };
 
@@ -106,6 +106,9 @@ export const setFirestoreEnabled = (enabled: boolean) => {
       localStorage.setItem('mel_firestore_enabled', enabled ? 'true' : 'false');
       if (enabled) {
         localQuotaExhausted = false;
+        try {
+          localStorage.removeItem('mel_firestore_quota_exhausted_until');
+        } catch {}
       }
     } catch {}
   }
@@ -113,6 +116,13 @@ export const setFirestoreEnabled = (enabled: boolean) => {
 
 let localQuotaExhausted = false;
 let quotaNoticeLogged = false;
+
+export const resetFirestoreQuotaExhaustion = () => {
+  localQuotaExhausted = false;
+  try {
+    localStorage.removeItem('mel_firestore_quota_exhausted_until');
+  } catch {}
+};
 
 export const isFirestoreQuotaExhausted = (): boolean => {
   if (!isFirestoreEnabled()) return true;
@@ -134,7 +144,7 @@ export const isFirestoreQuotaExhausted = (): boolean => {
 export const markFirestoreQuotaExhausted = () => {
   localQuotaExhausted = true;
   try {
-    localStorage.setItem('mel_firestore_quota_exhausted_until', String(Date.now() + 12 * 60 * 60 * 1000));
+    localStorage.setItem('mel_firestore_quota_exhausted_until', String(Date.now() + 60 * 60 * 1000));
   } catch {}
 };
 
@@ -159,18 +169,18 @@ export const checkAndHandleQuotaError = (err: any): boolean => {
   ) {
     localQuotaExhausted = true;
     try {
-      localStorage.setItem('mel_firestore_quota_exhausted_until', String(Date.now() + 12 * 60 * 60 * 1000));
+      localStorage.setItem('mel_firestore_quota_exhausted_until', String(Date.now() + 60 * 60 * 1000));
     } catch {}
     if (!quotaNoticeLogged) {
       quotaNoticeLogged = true;
-      console.info('[Firestore] Giới hạn đọc/ghi miễn phí trong ngày của Firestore (Spark 20.000 writes/ngày) đã đạt mức tối đa. Blog tự động vận hành mượt mà ở chế độ offline-first qua LocalStorage & Server API.');
+      console.info('[Firestore] Giới hạn đọc/ghi miễn phí trong ngày của Firestore (Spark 50k reads / 20k writes/ngày) đã đạt mức tối đa. Blog tự động vận hành an toàn qua LocalStorage & Server API.');
     }
     return true;
   }
   return false;
 };
 
-// Resilient getDoc wrapper: prevents Quota limit exceeded exceptions from crashing the app
+// Resilient getDoc wrapper: prevents exceptions from crashing the app
 export const getDoc = async (docRef: DocumentReference<DocumentData>): Promise<any> => {
   if (isFirestoreQuotaExhausted()) {
     return {
@@ -183,19 +193,18 @@ export const getDoc = async (docRef: DocumentReference<DocumentData>): Promise<a
   try {
     return await rawGetDoc(docRef);
   } catch (err: any) {
-    if (checkAndHandleQuotaError(err)) {
-      return {
-        exists: () => false,
-        data: () => null,
-        id: docRef.id,
-        ref: docRef,
-      };
-    }
-    throw err;
+    checkAndHandleQuotaError(err);
+    console.warn('[Firestore] getDoc resilient fallback:', err?.message || err);
+    return {
+      exists: () => false,
+      data: () => null,
+      id: docRef.id,
+      ref: docRef,
+    };
   }
 };
 
-// Resilient getDocs wrapper: prevents Quota limit exceeded exceptions from crashing query execution
+// Resilient getDocs wrapper: prevents exceptions from crashing query execution
 export const getDocs = async (q: any): Promise<any> => {
   if (isFirestoreQuotaExhausted()) {
     return {
@@ -208,19 +217,18 @@ export const getDocs = async (q: any): Promise<any> => {
   try {
     return await rawGetDocs(q);
   } catch (err: any) {
-    if (checkAndHandleQuotaError(err)) {
-      return {
-        empty: true,
-        size: 0,
-        docs: [],
-        forEach: () => {},
-      };
-    }
-    throw err;
+    checkAndHandleQuotaError(err);
+    console.warn('[Firestore] getDocs resilient fallback:', err?.message || err);
+    return {
+      empty: true,
+      size: 0,
+      docs: [],
+      forEach: () => {},
+    };
   }
 };
 
-// Resilient setDoc wrapper: skips Firestore call if quota exhausted, gracefully catches quota errors
+// Resilient setDoc wrapper: skips Firestore call if quota exhausted, gracefully catches all errors
 export const setDoc = async (
   docRef: DocumentReference<DocumentData>,
   data: DocumentData,
@@ -236,14 +244,13 @@ export const setDoc = async (
       await rawSetDoc(docRef, data);
     }
   } catch (err: any) {
-    if (checkAndHandleQuotaError(err)) {
-      return Promise.resolve();
-    }
-    throw err;
+    checkAndHandleQuotaError(err);
+    console.warn('[Firestore] setDoc write fallback to LocalStorage/Server:', err?.message || err);
+    return Promise.resolve();
   }
 };
 
-// Resilient updateDoc wrapper: skips Firestore call if quota exhausted, gracefully catches quota errors
+// Resilient updateDoc wrapper: skips Firestore call if quota exhausted, gracefully catches all errors
 export const updateDoc = async (
   docRef: DocumentReference<DocumentData>,
   dataOrField: UpdateData<DocumentData> | string,
@@ -255,14 +262,13 @@ export const updateDoc = async (
   try {
     await (rawUpdateDoc as any)(docRef, dataOrField, ...moreFieldsAndValues);
   } catch (err: any) {
-    if (checkAndHandleQuotaError(err)) {
-      return Promise.resolve();
-    }
-    throw err;
+    checkAndHandleQuotaError(err);
+    console.warn('[Firestore] updateDoc write fallback to LocalStorage/Server:', err?.message || err);
+    return Promise.resolve();
   }
 };
 
-// Resilient deleteDoc wrapper: skips Firestore call if quota exhausted, gracefully catches quota errors
+// Resilient deleteDoc wrapper: skips Firestore call if quota exhausted, gracefully catches all errors
 export const deleteDoc = async (docRef: DocumentReference<DocumentData>): Promise<void> => {
   if (isFirestoreQuotaExhausted()) {
     return Promise.resolve();
@@ -270,14 +276,13 @@ export const deleteDoc = async (docRef: DocumentReference<DocumentData>): Promis
   try {
     await rawDeleteDoc(docRef);
   } catch (err: any) {
-    if (checkAndHandleQuotaError(err)) {
-      return Promise.resolve();
-    }
-    throw err;
+    checkAndHandleQuotaError(err);
+    console.warn('[Firestore] deleteDoc write fallback to LocalStorage/Server:', err?.message || err);
+    return Promise.resolve();
   }
 };
 
-// Resilient addDoc wrapper: skips Firestore call if quota exhausted, gracefully catches quota errors
+// Resilient addDoc wrapper: skips Firestore call if quota exhausted, gracefully catches all errors
 export const addDoc = async (
   collectionRef: CollectionReference<DocumentData>,
   data: DocumentData
@@ -288,10 +293,9 @@ export const addDoc = async (
   try {
     return await rawAddDoc(collectionRef, data);
   } catch (err: any) {
-    if (checkAndHandleQuotaError(err)) {
-      return Promise.resolve({ id: 'local_' + Date.now() });
-    }
-    throw err;
+    checkAndHandleQuotaError(err);
+    console.warn('[Firestore] addDoc write fallback to LocalStorage/Server:', err?.message || err);
+    return Promise.resolve({ id: 'local_' + Date.now() });
   }
 };
 
@@ -325,10 +329,9 @@ export const writeBatch = (firestore: Firestore) => {
       try {
         await batch.commit();
       } catch (err: any) {
-        if (checkAndHandleQuotaError(err)) {
-          return Promise.resolve();
-        }
-        throw err;
+        checkAndHandleQuotaError(err);
+        console.warn('[Firestore] batch commit fallback to LocalStorage/Server:', err?.message || err);
+        return Promise.resolve();
       }
     },
   };

@@ -45,6 +45,7 @@ import { getStoredStories } from '../../lib/realtimeService';
 import {
   isFirestoreEnabled,
   setFirestoreEnabled,
+  resetFirestoreQuotaExhaustion,
 } from '../../lib/firebase';
 import { getApiBaseUrl, buildApiUrl, hasBackendServer, isStaticHosting, saveCustomBackendUrl } from '../../lib/apiConfig';
 import { Story, Chapter, Announcement } from '../../types';
@@ -391,7 +392,7 @@ export const AuthorSyncTab: React.FC<AuthorSyncTabProps> = ({ onFeedback, onRefr
               <div className="flex items-center gap-2">
                 <Flame className="w-4 h-4 text-amber-500" />
                 <span className="font-serif text-sm font-bold text-stone-800 dark:text-stone-100">
-                  Firestore
+                  Firestore Cloud
                 </span>
               </div>
               <span
@@ -401,30 +402,56 @@ export const AuthorSyncTab: React.FC<AuthorSyncTabProps> = ({ onFeedback, onRefr
                     : 'bg-rose-100 text-rose-800 dark:bg-rose-950/60 dark:text-rose-300'
                 }`}
               >
-                {firestoreActive ? 'Đang bật' : 'Tạm tắt (Hết Quota)'}
+                {firestoreActive ? 'Đang kích hoạt' : 'Tạm tắt (Offline-First)'}
               </span>
             </div>
-            <p className="text-xs text-stone-500 dark:text-stone-400">
-              Dự án Cloud Firestore mới (<code className="text-amber-600 dark:text-amber-400 font-mono text-[10px]">gen-lang-client-0187202886</code>) đã kết nối thành công, đồng bộ dữ liệu thời gian thực giữa các thiết bị.
+            <p className="text-xs text-stone-500 dark:text-stone-400 leading-relaxed">
+              Dự án: <code className="text-amber-600 dark:text-amber-400 font-mono text-[10px]">gen-lang-client-0187202886</code><br />
+              Cơ sở dữ liệu: <code className="text-amber-600 dark:text-amber-400 font-mono text-[10px]">ai-studio-thegioicuaem...</code>
+            </p>
+            <p className="text-[11px] text-stone-500 dark:text-stone-400">
+              Gói Spark miễn phí có hạn mức 50.000 đọc / 20.000 ghi mỗi ngày. Khi vượt hạn mức, blog tự động chuyển sang chế độ Local & Server an toàn mà không làm mất dữ liệu.
             </p>
           </div>
-          <div className="pt-2 border-t border-stone-100 dark:border-stone-800 flex items-center justify-between text-[11px] text-stone-600 dark:text-stone-400">
-            <button
-              type="button"
-              onClick={() => {
-                const next = !firestoreActive;
-                setFirestoreActive(next);
-                setFirestoreEnabled(next);
-                onFeedback(
-                  next ? 'success' : 'error',
-                  next ? 'Đã kích hoạt lại Firestore' : 'Đã ngắt Firestore (chạy chế độ GitHub/Server an toàn)'
-                );
-              }}
-              className="text-pink-600 hover:underline cursor-pointer font-medium"
+          <div className="pt-2 border-t border-stone-100 dark:border-stone-800 flex flex-wrap items-center justify-between gap-2 text-[11px] text-stone-600 dark:text-stone-400">
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={() => {
+                  const next = !firestoreActive;
+                  setFirestoreActive(next);
+                  setFirestoreEnabled(next);
+                  onFeedback(
+                    next ? 'success' : 'error',
+                    next ? 'Đã kích hoạt lại Firestore' : 'Đã chuyển sang chế độ Local/Server an toàn'
+                  );
+                }}
+                className="text-pink-600 hover:underline cursor-pointer font-medium"
+              >
+                {firestoreActive ? 'Tắt Firestore' : 'Bật lại Firestore'}
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  resetFirestoreQuotaExhaustion();
+                  setFirestoreActive(true);
+                  setFirestoreEnabled(true);
+                  onFeedback('success', 'Đã xóa bộ nhớ đệm hạn ngạch. Đang thử kết nối lại Firestore!');
+                }}
+                className="text-emerald-600 hover:underline cursor-pointer font-medium"
+              >
+                Xóa cache Quota
+              </button>
+            </div>
+            <a
+              href="https://console.firebase.google.com/project/gen-lang-client-0187202886/firestore/databases/ai-studio-thegioicuaem-b7c7b641-4999-40b9-94b5-153b75e5cc27/data?openUpgradeDialog=true"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-amber-600 hover:underline inline-flex items-center gap-0.5 font-medium"
             >
-              {firestoreActive ? 'Bấm để tắt Firestore' : 'Bấm để bật lại'}
-            </button>
-            <span className="text-stone-400">Tùy chọn</span>
+              <span>Xem / Nâng hạn mức</span>
+              <ExternalLink className="w-3 h-3" />
+            </a>
           </div>
         </div>
       </div>

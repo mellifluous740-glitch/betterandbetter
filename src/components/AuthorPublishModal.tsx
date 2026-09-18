@@ -320,8 +320,9 @@ export const AuthorPublishModal: React.FC<AuthorPublishModalProps> = ({
       setPasswordKey('');
 
       if (onStoriesUpdated) onStoriesUpdated();
-    } catch {
-      showFeedback('error', 'Không thể lưu truyện vào cơ sở dữ liệu. Vui lòng thử lại.');
+    } catch (err: any) {
+      console.warn('Story publish error:', err);
+      showFeedback('error', `Sự cố khi lưu truyện: ${err?.message || 'Vui lòng thử lại'}`);
     } finally {
       setIsProcessing(false);
     }
@@ -377,8 +378,9 @@ export const AuthorPublishModal: React.FC<AuthorPublishModalProps> = ({
       setChapterNumber((prev) => prev + 1);
 
       if (onStoriesUpdated) onStoriesUpdated();
-    } catch {
-      showFeedback('error', 'Lỗi khi đăng chương. Vui lòng thử lại.');
+    } catch (err: any) {
+      console.warn('Chapter publish error:', err);
+      showFeedback('error', `Sự cố khi đăng chương: ${err?.message || 'Vui lòng thử lại'}`);
     } finally {
       setIsProcessing(false);
     }
