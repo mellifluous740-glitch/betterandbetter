@@ -226,7 +226,7 @@ export const StoryModal: React.FC<StoryModalProps> = ({
                       isCompleted ? 'bg-emerald-500/90 text-white' : 'bg-sky-500/90 text-white'
                     }`}
                   >
-                    {isCompleted ? 'Full (HE)' : 'Đang ra'}
+                    {isCompleted ? 'Đã hoàn thành' : 'Đang tiến hành'}
                   </span>
                   {extraChapters.length > 0 && (
                     <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-rose-500/90 text-white backdrop-blur-md shadow-xs">
