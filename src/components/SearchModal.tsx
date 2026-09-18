@@ -84,7 +84,7 @@ export const SearchModal: React.FC<SearchModalProps> = ({
                 Gõ tên truyện hoặc từ khóa để tìm kiếm nhanh trong nhà Mel
               </p>
               <div className="flex flex-wrap items-center justify-center gap-2 pt-2">
-                {['Thanh xuân vườn trường', 'HE', 'Ngọt sủng', 'Mùa hè'].map((keyword) => (
+                {['Thanh xuân vườn trường', 'HE', 'Ngọt sủng'].map((keyword) => (
                   <button
                     key={keyword}
                     type="button"
