@@ -341,20 +341,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
           </cite>
         </blockquote>
       </div>
-
-        <button
-          type="button"
-          onClick={toggleAudioAmbiance}
-          className={`p-2 rounded-xl border transition-colors cursor-pointer ${
-            isPlayingAudio
-              ? 'bg-pink-500 text-white border-pink-600 shadow-xs'
-              : 'bg-stone-100 dark:bg-stone-700 text-stone-600 dark:text-stone-300 border-stone-200 dark:border-stone-600'
-          }`}
-          title={isPlayingAudio ? 'Tạm dừng nhạc' : 'Bật giai điệu thư giãn'}
-        >
-          {isPlayingAudio ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
-        </button>
-      </div>
     </aside>
   );
 };
