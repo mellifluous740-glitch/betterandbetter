@@ -64,7 +64,7 @@ export const Footer: React.FC = () => {
             </div>
 
             <p className="font-serif text-xs sm:text-sm text-stone-600 dark:text-stone-400 max-w-md leading-relaxed italic">
-              "Một chiếc thuyền nhỏ lênh đênh ngược gió, chở theo những trang truyện thanh xuân và những mùa hè ngọt ngào không bao giờ kết thúc."
+              Một chiếc thuyền nhỏ lênh đênh ngược gió
             </p>
           </div>
 
@@ -75,7 +75,7 @@ export const Footer: React.FC = () => {
             </span>
             <div className="flex items-center gap-3">
               <a
-                href="https://facebook.com"
+                href="https://www.facebook.com/profile.php?id=100083253852984"
                 target="_blank"
                 rel="noreferrer"
                 id="footer-social-facebook"
@@ -89,7 +89,7 @@ export const Footer: React.FC = () => {
               </a>
 
               <a
-                href="https://wordpress.com"
+                href="https://betterthanyesterday027.wordpress.com"
                 target="_blank"
                 rel="noreferrer"
                 id="footer-social-wordpress"
@@ -182,7 +182,7 @@ export const Footer: React.FC = () => {
         <div className="flex flex-col sm:flex-row items-center justify-between gap-4 text-xs pt-4 border-t border-pink-100/60 dark:border-stone-800">
           <div className="flex items-center gap-2 text-stone-500 dark:text-stone-400">
             <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping" />
-            <span>Cơ sở dữ liệu đám mây kết nối thời gian thực qua Firestore Cloud</span>
+            <span>Cập nhật qua Firestore Cloud</span>
           </div>
 
           <div className="text-center sm:text-right space-y-1">
@@ -190,7 +190,7 @@ export const Footer: React.FC = () => {
               © 2026 <strong className="text-pink-600 dark:text-pink-400">better and better</strong> 🌸 Mellifluous. All rights reserved.
             </p>
             <p className="text-[11px] text-stone-400 dark:text-stone-500 font-sans">
-              Bản dịch phi thương mại • Số liệu được ghi nhận tự động trên mọi thiết bị và trình duyệt
+              Trang web phi thương mại • Đừng bê truyện nhà tui đi đâu nhaaaa
             </p>
           </div>
         </div>
