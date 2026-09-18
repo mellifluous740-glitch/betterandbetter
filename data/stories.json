@@ -1,31 +1,5 @@
 [
   {
-    "id": "kha-ha",
-    "title": "khà hà",
-    "originalTitle": "",
-    "author": "hafmeetj nha",
-    "translator": "Mellifluous",
-    "status": "ongoing",
-    "genre": [
-      "Thanh xuân",
-      "Ngọt sủng"
-    ],
-    "summary": "ddcm",
-    "totalChapters": 30,
-    "completedChapters": 0,
-    "mainChaptersCount": 30,
-    "extraChaptersCount": 0,
-    "coverImage": "https://images.unsplash.com/photo-1522383225653-ed111181a951?q=80&w=800&auto=format&fit=crop",
-    "colorTheme": "from-pink-100 to-rose-200 dark:from-pink-950/40 dark:to-rose-900/40",
-    "hasPassword": false,
-    "passwordHint": "",
-    "passwordKey": "",
-    "updatedAt": "2026-09-18T00:40:41.528Z",
-    "views": 0,
-    "likes": 0,
-    "featured": true
-  },
-  {
     "id": "nhgdcvjswhj",
     "title": "nhgdcvjswhj",
     "originalTitle": "",
