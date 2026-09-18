@@ -197,7 +197,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             </div>
             <div>
               <h3 className="font-serif text-base font-bold text-stone-800 dark:text-white flex items-center gap-1.5">
-                <span>Chọn tác phẩm truyện</span>
+                <span>Chọn thư và danh mục ở đây nè</span>
                 <span className="text-xs">🌸</span>
               </h3>
               <p className="text-[11px] text-stone-500 dark:text-stone-400 font-sans">
