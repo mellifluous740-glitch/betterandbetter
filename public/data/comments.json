@@ -1,12 +1,5 @@
 [
   {
-    "id": "comm_test_1",
-    "storyId": "chao-tiep-ha",
-    "user": "Test User",
-    "text": "Xin chào Mellifluous",
-    "createdAt": "2026-09-18T00:00:00.000Z"
-  },
-  {
     "id": "comm_1789667569971_57mq9",
     "storyId": "chao-tiep-ha",
     "chapterNumber": 2,

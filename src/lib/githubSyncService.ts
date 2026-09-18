@@ -15,13 +15,50 @@ export interface GithubConfig {
 }
 
 const STORAGE_CONFIG_KEY = 'mel_github_config_v1';
-const DEFAULT_REPO = 'maianhpham927-glitch/mellifluous';
-const DEFAULT_BRANCH = 'main';
+export const DEFAULT_REPO = 'mellifluous740-glitch/betterandbetter';
+export const DEFAULT_BRANCH = 'main';
+
+/**
+ * Automatically detects the authoritative repository (owner/repo):
+ * 1. Explicit user configuration in localStorage (if valid and not obsolete legacy placeholder)
+ * 2. Automatic detection from GitHub Pages URL (e.g. username.github.io/reponame)
+ * 3. Default fallback to mellifluous740-glitch/betterandbetter
+ */
+export const resolveAuthoritativeRepo = (): string => {
+  if (typeof window !== 'undefined') {
+    try {
+      const raw = localStorage.getItem(STORAGE_CONFIG_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (
+          parsed.repo &&
+          typeof parsed.repo === 'string' &&
+          parsed.repo.trim() &&
+          !parsed.repo.includes('maianhpham927-glitch')
+        ) {
+          return parsed.repo.trim();
+        }
+      }
+    } catch {}
+
+    // Auto-detect from GitHub Pages hostname & pathname
+    if (window.location.hostname.endsWith('.github.io')) {
+      const owner = window.location.hostname.replace('.github.io', '');
+      const pathParts = window.location.pathname.split('/').filter(Boolean);
+      const repoName = pathParts[0] || 'betterandbetter';
+      return `${owner}/${repoName}`;
+    }
+  }
+
+  return DEFAULT_REPO;
+};
 
 export const getGithubConfig = (): GithubConfig => {
+  const effectiveRepo = resolveAuthoritativeRepo();
+
   if (typeof window === 'undefined') {
     return {
-      repo: DEFAULT_REPO,
+      repo: effectiveRepo,
       branch: DEFAULT_BRANCH,
       token: '',
       autoSync: true,
@@ -32,8 +69,14 @@ export const getGithubConfig = (): GithubConfig => {
     const raw = localStorage.getItem(STORAGE_CONFIG_KEY);
     if (raw) {
       const parsed = JSON.parse(raw);
+      // Clean up legacy obsolete placeholder if found
+      const finalRepo =
+        parsed.repo && !parsed.repo.includes('maianhpham927-glitch')
+          ? parsed.repo.trim()
+          : effectiveRepo;
+
       return {
-        repo: parsed.repo || DEFAULT_REPO,
+        repo: finalRepo,
         branch: parsed.branch || DEFAULT_BRANCH,
         token: parsed.token || localStorage.getItem('mel_github_token') || '',
         autoSync: parsed.autoSync !== false,
@@ -44,7 +87,7 @@ export const getGithubConfig = (): GithubConfig => {
 
   const token = localStorage.getItem('mel_github_token') || '';
   return {
-    repo: DEFAULT_REPO,
+    repo: effectiveRepo,
     branch: DEFAULT_BRANCH,
     token,
     autoSync: true,
@@ -176,13 +219,23 @@ export async function fetchRawGithubJson<T>(filename: string): Promise<T | null>
     }
   } catch {}
 
-  // Fallback 3: Local /data/ or relative base path in deployed build
+  // Fallback 3: Local /data/ or relative base path in deployed build (e.g. GitHub Pages)
   try {
-    const isGhActions = typeof window !== 'undefined' && window.location.pathname.includes('/mellifluous/');
-    const localBasePath = isGhActions ? '/mellifluous/data/' : '/data/';
-    const localRes = await fetch(`${localBasePath}${filename}?_t=${cacheBuster}`, { cache: 'no-store' });
-    if (localRes.ok) {
-      return await localRes.json();
+    const base = (typeof import.meta !== 'undefined' && (import.meta as any).env?.BASE_URL) || '/';
+    const cleanBase = base.endsWith('/') ? base : `${base}/`;
+    const pathsToTry = [
+      `${cleanBase}data/${filename}?_t=${cacheBuster}`,
+      `/betterandbetter/data/${filename}?_t=${cacheBuster}`,
+      `/data/${filename}?_t=${cacheBuster}`,
+    ];
+
+    for (const p of pathsToTry) {
+      try {
+        const localRes = await fetch(p, { cache: 'no-store' });
+        if (localRes.ok) {
+          return await localRes.json();
+        }
+      } catch {}
     }
   } catch {}
 
