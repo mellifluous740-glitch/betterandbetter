@@ -188,27 +188,37 @@ export const sortAnnouncements = (list: Announcement[]): Announcement[] => {
  * ensuring author edits and newly published chapters are preserved.
  */
 export const mergeChapters = (base: Chapter[], incoming: Chapter[]): Chapter[] => {
+  if (!Array.isArray(incoming) || incoming.length === 0) return base;
   const map = new Map<string, Chapter>();
-  base.forEach((ch) => {
-    const key = ch.id || `${ch.storyId}-${ch.partType || (ch.isExtra ? 'extra' : 'main')}-${ch.chapterNumber}`;
-    map.set(key, ch);
-  });
+  const incomingKeys = new Set<string>();
+
+  // 1. Authoritative incoming chapters from remote
   incoming.forEach((ch) => {
     const key = ch.id || `${ch.storyId}-${ch.partType || (ch.isExtra ? 'extra' : 'main')}-${ch.chapterNumber}`;
-    const existing = map.get(key);
-    if (!existing) {
-      map.set(key, ch);
+    incomingKeys.add(key);
+    map.set(key, ch);
+  });
+
+  // 2. Only retain local chapters that are freshly created (< 15 mins) and not in incoming
+  base.forEach((ch) => {
+    const key = ch.id || `${ch.storyId}-${ch.partType || (ch.isExtra ? 'extra' : 'main')}-${ch.chapterNumber}`;
+    if (!incomingKeys.has(key)) {
+      const time = parseSafeTimestamp(ch.updatedAt || ch.publishedAt);
+      const isFreshLocal = time > 0 && (Date.now() - time) < 15 * 60 * 1000;
+      if (isFreshLocal) {
+        map.set(key, ch);
+      }
     } else {
-      const existingTime = parseSafeTimestamp(existing.updatedAt || existing.publishedAt);
-      const incomingTime = parseSafeTimestamp(ch.updatedAt || ch.publishedAt);
-      // If existing local chapter is newer or equal (e.g. freshly edited locally), retain existing edits
-      if (existingTime >= incomingTime && existingTime > 0) {
-        map.set(key, { ...ch, ...existing });
-      } else {
-        map.set(key, { ...existing, ...ch });
+      // It exists in incoming, check if local has newer un-pushed edits
+      const incomingCh = map.get(key)!;
+      const existingTime = parseSafeTimestamp(ch.updatedAt || ch.publishedAt);
+      const incomingTime = parseSafeTimestamp(incomingCh.updatedAt || incomingCh.publishedAt);
+      if (existingTime > incomingTime && existingTime > 0) {
+        map.set(key, { ...incomingCh, ...ch });
       }
     }
   });
+
   const result = Array.from(map.values());
   result.sort((a, b) => {
     const numA = Number(a.chapterNumber) || 0;
@@ -1456,7 +1466,11 @@ export const subscribeToComments = (
           const map = new Map<string, RealtimeComment>();
           list.forEach((c) => map.set(c.id, c));
           current.forEach((c) => {
-            if (!map.has(c.id)) map.set(c.id, c);
+            if (!map.has(c.id)) {
+              const time = parseSafeTimestamp(c.createdAt);
+              const isFreshLocal = time > 0 && (Date.now() - time) < 10 * 60 * 1000;
+              if (isFreshLocal) map.set(c.id, c);
+            }
           });
           const merged = Array.from(map.values()).sort(
             (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
@@ -1939,9 +1953,17 @@ export const subscribeToReaderLetters = (
         if (Array.isArray(serverLetters) && serverLetters.length > 0) {
           const current = getStoredReaderLetters();
           const letterMap = new Map<string, ReaderLetter>();
-          serverLetters.forEach((l: ReaderLetter) => letterMap.set(l.id, l));
+          const remoteKeys = new Set<string>();
+          serverLetters.forEach((l: ReaderLetter) => {
+            remoteKeys.add(l.id);
+            letterMap.set(l.id, l);
+          });
           current.forEach((l) => {
-            if (!letterMap.has(l.id)) letterMap.set(l.id, l);
+            if (!remoteKeys.has(l.id)) {
+              const time = parseSafeTimestamp(l.createdAt);
+              const isFreshLocal = time > 0 && (Date.now() - time) < 10 * 60 * 1000;
+              if (isFreshLocal) letterMap.set(l.id, l);
+            }
           });
           const merged = Array.from(letterMap.values()).sort(
             (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
@@ -1991,10 +2013,14 @@ export const subscribeToReaderLetters = (
             const mergedMap = new Map<string, ReaderLetter>();
             // Remote first
             remoteList.forEach((item) => mergedMap.set(item.id, item));
-            // Keep any local item not in remote
+            // Keep any local item not in remote only if freshly created (< 10 mins)
             currentLocal.forEach((item) => {
               if (!mergedMap.has(item.id)) {
-                mergedMap.set(item.id, item);
+                const time = parseSafeTimestamp(item.createdAt);
+                const isFreshLocal = time > 0 && (Date.now() - time) < 10 * 60 * 1000;
+                if (isFreshLocal) {
+                  mergedMap.set(item.id, item);
+                }
               }
             });
 
@@ -3509,15 +3535,25 @@ export const subscribeToAnnouncements = (
       if (!Array.isArray(incoming) || incoming.length === 0) return;
       const current = getStoredAnnouncements();
       const map = new Map<string, Announcement>();
-      // Keep all local announcements
-      current.forEach((a) => map.set(a.id, a));
-      // Add or update from incoming
+      const incomingKeys = new Set<string>();
+
+      // 1. Authoritative incoming announcements from remote
       incoming.forEach((a) => {
-        if (!map.has(a.id)) {
-          map.set(a.id, a);
+        incomingKeys.add(a.id);
+        map.set(a.id, a);
+      });
+
+      // 2. Only keep local announcements if they were created very recently (< 15 mins) and not in remote yet
+      current.forEach((a) => {
+        if (!incomingKeys.has(a.id)) {
+          const time = parseSafeTimestamp(a.createdAt || a.date);
+          const isFreshLocal = time > 0 && (Date.now() - time) < 15 * 60 * 1000;
+          if (isFreshLocal) {
+            map.set(a.id, a);
+          }
         } else {
           const ex = map.get(a.id)!;
-          map.set(a.id, { ...ex, ...a });
+          map.set(a.id, { ...a, ...ex });
         }
       });
       const merged = sortAnnouncements(Array.from(map.values()));
