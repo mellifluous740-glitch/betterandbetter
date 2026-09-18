@@ -8,6 +8,7 @@ import {
   subscribeToAllChapters,
   sortStoriesByLatest,
   sortAnnouncements,
+  getStoredAnnouncements,
 } from './lib/realtimeService';
 import { AuthorPublishModal } from './components/AuthorPublishModal';
 import { Navbar } from './components/Navbar';
@@ -112,7 +113,7 @@ export default function App() {
   const [isSearchOpen, setIsSearchOpen] = useState<boolean>(false);
   const [isAuthorModalOpen, setIsAuthorModalOpen] = useState<boolean>(false);
   const [stories, setStories] = useState<Story[]>(() => sortStoriesByLatest(STORIES));
-  const [announcements, setAnnouncements] = useState<Announcement[]>(() => sortAnnouncements(ANNOUNCEMENTS));
+  const [announcements, setAnnouncements] = useState<Announcement[]>(() => sortAnnouncements(getStoredAnnouncements()));
   const [chaptersVersion, setChaptersVersion] = useState<number>(0);
 
   // Real-time synchronization of published stories, chapters & announcements across all devices
@@ -128,10 +129,8 @@ export default function App() {
     });
 
     const unsubAnn = subscribeToAnnouncements((liveAnn) => {
-      if (Array.isArray(liveAnn) && liveAnn.length > 0) {
+      if (Array.isArray(liveAnn)) {
         setAnnouncements(sortAnnouncements(liveAnn));
-      } else {
-        setAnnouncements(sortAnnouncements(ANNOUNCEMENTS));
       }
     });
 
@@ -844,11 +843,11 @@ export default function App() {
         isOpen={isSearchOpen}
         onClose={() => setIsSearchOpen(false)}
         stories={stories}
-        announcements={announcements}
         onSelectStory={(storyId) => {
           setIsSearchOpen(false);
           handleOpenStoryModal(storyId);
         }}
+        onSelectChapter={handleOpenChapter}
       />
 
       {/* Author Publishing & Stats Reset Modal */}

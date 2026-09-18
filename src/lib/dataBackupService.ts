@@ -6,7 +6,7 @@
 
 import { Story, Chapter, Announcement, ReaderLetter } from '../types';
 import { getLiveChaptersRuntimeCache, getStoryChapters, setLiveStoryChapters } from '../data/mockData';
-import { getStoredStories } from './realtimeService';
+import { getStoredStories, getStoredAnnouncements, saveStoredAnnouncements } from './realtimeService';
 import { getCustomGenres, updateGenresFromRemote } from '../utils/genreManager';
 import { bgmEngine } from '../utils/audioPlayer';
 
@@ -22,6 +22,7 @@ export interface MellifluousFullBackup {
     playlist: any[];
     letters: ReaderLetter[];
     deletedStoryIds?: string[];
+    deletedAnnouncementIds?: string[];
   };
 }
 
@@ -39,11 +40,7 @@ export const generateFullBackup = (): MellifluousFullBackup => {
     fullChapters[s.id] = list;
   });
 
-  let announcements: Announcement[] = [];
-  try {
-    const raw = localStorage.getItem('mel_published_announcements');
-    if (raw) announcements = JSON.parse(raw);
-  } catch {}
+  const announcements = getStoredAnnouncements();
 
   let letters: ReaderLetter[] = [];
   try {
@@ -55,6 +52,12 @@ export const generateFullBackup = (): MellifluousFullBackup => {
   try {
     const raw = localStorage.getItem('mel_deleted_story_ids');
     if (raw) deletedStoryIds = JSON.parse(raw);
+  } catch {}
+
+  let deletedAnnouncementIds: string[] = [];
+  try {
+    const raw = localStorage.getItem('mel_deleted_announcement_ids');
+    if (raw) deletedAnnouncementIds = JSON.parse(raw);
   } catch {}
 
   const genres = getCustomGenres();
@@ -72,6 +75,7 @@ export const generateFullBackup = (): MellifluousFullBackup => {
       playlist,
       letters,
       deletedStoryIds,
+      deletedAnnouncementIds,
     },
   };
 };
@@ -109,7 +113,7 @@ export const restoreFromBackup = (
     throw new Error('Định dạng tệp sao lưu không hợp lệ!');
   }
 
-  const { stories, chapters, announcements, genres, playlist, letters, deletedStoryIds } = backup.data;
+  const { stories, chapters, announcements, genres, playlist, letters, deletedStoryIds, deletedAnnouncementIds } = backup.data;
 
   let storiesCount = 0;
   let chaptersCount = 0;
@@ -134,7 +138,7 @@ export const restoreFromBackup = (
 
   // 3. Announcements
   if (Array.isArray(announcements)) {
-    localStorage.setItem('mel_published_announcements', JSON.stringify(announcements));
+    saveStoredAnnouncements(announcements);
     announcementsCount = announcements.length;
   }
 
@@ -156,6 +160,10 @@ export const restoreFromBackup = (
   // 7. Deleted IDs
   if (Array.isArray(deletedStoryIds)) {
     localStorage.setItem('mel_deleted_story_ids', JSON.stringify(deletedStoryIds));
+  }
+
+  if (Array.isArray(deletedAnnouncementIds)) {
+    localStorage.setItem('mel_deleted_announcement_ids', JSON.stringify(deletedAnnouncementIds));
   }
 
   return {

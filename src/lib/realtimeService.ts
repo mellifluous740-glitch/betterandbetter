@@ -37,6 +37,9 @@ import {
   getLiveChaptersRuntimeCache,
   isStoryDeleted,
   recordStoryDeleted,
+  isAnnouncementDeleted,
+  recordAnnouncementDeleted,
+  unmarkAnnouncementDeleted,
 } from '../data/mockData';
 import { buildApiUrl, hasBackendServer, safeApiFetch } from './apiConfig';
 import { bgmEngine } from '../utils/audioPlayer';
@@ -356,15 +359,24 @@ export const getStoredStories = (): Story[] => {
 
 export const getStoredAnnouncements = (): Announcement[] => {
   try {
-    const raw = localStorage.getItem('mel_announcements');
-    if (raw) {
+    const raw = localStorage.getItem('mel_announcements') || localStorage.getItem('mel_published_announcements');
+    if (raw !== null) {
       const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed) && parsed.length > 0) {
-        return parsed;
+      if (Array.isArray(parsed)) {
+        return parsed.filter((a) => !isAnnouncementDeleted(a.id));
       }
     }
   } catch {}
-  return ANNOUNCEMENTS;
+  return ANNOUNCEMENTS.filter((a) => !isAnnouncementDeleted(a.id));
+};
+
+export const saveStoredAnnouncements = (list: Announcement[]): void => {
+  try {
+    const clean = list.filter((a) => !isAnnouncementDeleted(a.id));
+    const json = JSON.stringify(clean);
+    localStorage.setItem('mel_announcements', json);
+    localStorage.setItem('mel_published_announcements', json);
+  } catch {}
 };
 
 export const INITIAL_SAMPLE_LETTERS: ReaderLetter[] = [
@@ -569,34 +581,34 @@ export const initServerRealtimeSync = () => {
       }
 
       // C. Announcements
-      if (data.announcements && Array.isArray(data.announcements) && data.announcements.length > 0) {
+      if (data.announcements !== undefined && Array.isArray(data.announcements)) {
+        const remoteAnn = data.announcements.filter((a: Announcement) => !isAnnouncementDeleted(a.id));
         const currentAnn = getStoredAnnouncements();
-        const annMap = new Map(currentAnn.map((a) => [a.id, a]));
-        let annChanged = false;
-        for (const a of data.announcements) {
-          if (!annMap.has(a.id)) {
-            annMap.set(a.id, a);
-            annChanged = true;
+        const annMap = new Map<string, Announcement>();
+
+        // Remote announcements
+        remoteAnn.forEach((a: Announcement) => {
+          annMap.set(a.id, a);
+        });
+
+        // Retain local announcements if newer or not in remote
+        currentAnn.forEach((localA) => {
+          if (isAnnouncementDeleted(localA.id)) return;
+          if (!annMap.has(localA.id)) {
+            annMap.set(localA.id, localA);
           } else {
-            const existing = annMap.get(a.id)!;
-            if (
-              existing.title !== a.title ||
-              existing.content !== a.content ||
-              existing.tag !== a.tag ||
-              existing.isPinned !== a.isPinned
-            ) {
-              annMap.set(a.id, a);
-              annChanged = true;
+            const remoteItem = annMap.get(localA.id)!;
+            const localTime = parseSafeTimestamp(localA.createdAt || localA.date);
+            const remoteTime = parseSafeTimestamp(remoteItem.createdAt || remoteItem.date);
+            if (localTime >= remoteTime) {
+              annMap.set(localA.id, localA);
             }
           }
-        }
-        if (annChanged || currentAnn.length === 0) {
-          const nextAnn = sortAnnouncements(Array.from(annMap.values()));
-          try {
-            localStorage.setItem('mel_announcements', JSON.stringify(nextAnn));
-          } catch {}
-          notifyAnnouncementSubscribers(nextAnn);
-        }
+        });
+
+        const nextAnn = sortAnnouncements(Array.from(annMap.values()).filter((a) => !isAnnouncementDeleted(a.id)));
+        saveStoredAnnouncements(nextAnn);
+        notifyAnnouncementSubscribers(nextAnn);
       }
 
       // D. Playlist
@@ -3532,34 +3544,37 @@ export const subscribeToAnnouncements = (
   let pollAnnInterval: any = null;
   if (typeof window !== 'undefined') {
     const applyIncomingAnnouncements = (incoming: Announcement[]) => {
-      if (!Array.isArray(incoming) || incoming.length === 0) return;
+      if (!Array.isArray(incoming)) return;
+      const validIncoming = incoming.filter((a) => !isAnnouncementDeleted(a.id));
       const current = getStoredAnnouncements();
       const map = new Map<string, Announcement>();
       const incomingKeys = new Set<string>();
 
-      // 1. Authoritative incoming announcements from remote
-      incoming.forEach((a) => {
+      // 1. Remote incoming
+      validIncoming.forEach((a) => {
         incomingKeys.add(a.id);
         map.set(a.id, a);
       });
 
-      // 2. Only keep local announcements if they were created very recently (< 15 mins) and not in remote yet
-      current.forEach((a) => {
-        if (!incomingKeys.has(a.id)) {
-          const time = parseSafeTimestamp(a.createdAt || a.date);
-          const isFreshLocal = time > 0 && (Date.now() - time) < 15 * 60 * 1000;
-          if (isFreshLocal) {
-            map.set(a.id, a);
-          }
+      // 2. Retain local announcements that are not in cemetery
+      current.forEach((localA) => {
+        if (isAnnouncementDeleted(localA.id)) return;
+        if (!incomingKeys.has(localA.id)) {
+          map.set(localA.id, localA);
         } else {
-          const ex = map.get(a.id)!;
-          map.set(a.id, { ...a, ...ex });
+          const remoteA = map.get(localA.id)!;
+          const localTime = parseSafeTimestamp(localA.createdAt || localA.date);
+          const remoteTime = parseSafeTimestamp(remoteA.createdAt || remoteA.date);
+          if (localTime >= remoteTime) {
+            map.set(localA.id, localA);
+          } else {
+            map.set(localA.id, remoteA);
+          }
         }
       });
-      const merged = sortAnnouncements(Array.from(map.values()));
-      try {
-        localStorage.setItem('mel_announcements', JSON.stringify(merged));
-      } catch {}
+
+      const merged = sortAnnouncements(Array.from(map.values()).filter((a) => !isAnnouncementDeleted(a.id)));
+      saveStoredAnnouncements(merged);
       callback(merged);
       notifyAnnouncementSubscribers(merged);
     };
@@ -3569,12 +3584,12 @@ export const subscribeToAnnouncements = (
         fetch(buildApiUrl('/api/announcements'))
           .then((res) => (res.ok ? res.json() : null))
           .then((serverAnn) => {
-            if (Array.isArray(serverAnn) && serverAnn.length > 0) {
+            if (Array.isArray(serverAnn)) {
               applyIncomingAnnouncements(serverAnn);
             } else {
               fetchRawGithubJson<Announcement[]>('announcements.json')
                 .then((ghAnn) => {
-                  if (Array.isArray(ghAnn) && ghAnn.length > 0) {
+                  if (Array.isArray(ghAnn)) {
                     applyIncomingAnnouncements(ghAnn);
                   }
                 })
@@ -3584,7 +3599,7 @@ export const subscribeToAnnouncements = (
           .catch(() => {
             fetchRawGithubJson<Announcement[]>('announcements.json')
               .then((ghAnn) => {
-                if (Array.isArray(ghAnn) && ghAnn.length > 0) {
+                if (Array.isArray(ghAnn)) {
                   applyIncomingAnnouncements(ghAnn);
                 }
               })
@@ -3593,7 +3608,7 @@ export const subscribeToAnnouncements = (
       } else {
         fetchRawGithubJson<Announcement[]>('announcements.json')
           .then((ghAnn) => {
-            if (Array.isArray(ghAnn) && ghAnn.length > 0) {
+            if (Array.isArray(ghAnn)) {
               applyIncomingAnnouncements(ghAnn);
             }
           })
@@ -3615,18 +3630,18 @@ export const subscribeToAnnouncements = (
       unsubFirestore = onSnapshot(
         q,
         (snapshot) => {
-          if (!snapshot.empty) {
-            const list: Announcement[] = [];
-            snapshot.forEach((d) => {
-              list.push({ ...(d.data() as Announcement), id: d.id });
-            });
-            const sorted = sortAnnouncements(list);
-            try {
-              localStorage.setItem('mel_announcements', JSON.stringify(sorted));
-            } catch {}
-            callback(sorted);
-            notifyAnnouncementSubscribers(sorted);
-          }
+          const list: Announcement[] = [];
+          snapshot.forEach((d) => {
+            const data = d.data() as Announcement;
+            const annId = data.id || d.id;
+            if (!isAnnouncementDeleted(annId)) {
+              list.push({ ...data, id: annId });
+            }
+          });
+          const sorted = sortAnnouncements(list);
+          saveStoredAnnouncements(sorted);
+          callback(sorted);
+          notifyAnnouncementSubscribers(sorted);
         },
         (err) => {
           if (!flagFirestoreQuotaExceeded(err)) {
@@ -3661,11 +3676,14 @@ export const publishAnnouncement = async (announcement: Announcement): Promise<v
     isPinned: Boolean(announcement.isPinned),
   };
 
+  // Re-enable this announcement ID if previously deleted
+  unmarkAnnouncementDeleted(cleanAnn.id);
+
   let updatedAnnouncements: Announcement[] = [];
   try {
     const current = getStoredAnnouncements();
     updatedAnnouncements = sortAnnouncements([cleanAnn, ...current.filter((a) => a.id !== cleanAnn.id)]);
-    localStorage.setItem('mel_announcements', JSON.stringify(updatedAnnouncements));
+    saveStoredAnnouncements(updatedAnnouncements);
     notifyAnnouncementSubscribers(updatedAnnouncements);
   } catch (err) {
     console.warn('Local announcement save warning:', err);
@@ -3675,11 +3693,11 @@ export const publishAnnouncement = async (announcement: Announcement): Promise<v
 
   if (hasBackendServer()) {
     tasks.push(
-      fetchWithTimeout('/api/announcements', {
+      fetchWithTimeout(buildApiUrl('/api/announcements'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(cleanAnn),
-      }, 3000).catch((apiErr) => {
+      }, 4000).catch((apiErr) => {
         console.warn('Server API announcement save warning:', apiErr);
       })
     );
@@ -3716,14 +3734,18 @@ export const publishAnnouncement = async (announcement: Announcement): Promise<v
 };
 
 /**
- * Delete an announcement with dual persistence.
+ * Delete an announcement with dual persistence and deletion cemetery.
  */
 export const deleteAnnouncement = async (announcementId: string): Promise<void> => {
+  // 1. Mark in permanent deletion cemetery
+  recordAnnouncementDeleted(announcementId);
+
+  // 2. Update local state immediately
   let updatedAnn: Announcement[] = [];
   try {
     const current = getStoredAnnouncements();
     updatedAnn = current.filter((a) => a.id !== announcementId);
-    localStorage.setItem('mel_announcements', JSON.stringify(updatedAnn));
+    saveStoredAnnouncements(updatedAnn);
     notifyAnnouncementSubscribers(updatedAnn);
   } catch (err) {
     console.warn('Local announcement delete warning:', err);
@@ -3731,6 +3753,18 @@ export const deleteAnnouncement = async (announcementId: string): Promise<void> 
 
   const tasks: Promise<any>[] = [];
 
+  // 3. Central Node Server API delete
+  if (hasBackendServer()) {
+    tasks.push(
+      fetchWithTimeout(buildApiUrl(`/api/announcements/${encodeURIComponent(announcementId)}`), {
+        method: 'DELETE',
+      }, 4000).catch((apiErr) => {
+        console.warn('Server API delete announcement warning:', apiErr);
+      })
+    );
+  }
+
+  // 4. Firestore delete
   if (!checkIsFirestoreBlocked()) {
     const firestoreDel = async () => {
       try {
@@ -3743,7 +3777,7 @@ export const deleteAnnouncement = async (announcementId: string): Promise<void> 
     tasks.push(withTimeout(firestoreDel(), 3500).catch((err) => console.warn('Firestore delete announcement timeout:', err)));
   }
 
-  // GitHub Sync
+  // 5. GitHub Sync
   const ghConfig = getGithubConfig();
   if (ghConfig.token && ghConfig.autoSync) {
     tasks.push(

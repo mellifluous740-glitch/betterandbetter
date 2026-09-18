@@ -39,9 +39,9 @@ import {
 import {
   getLiveChaptersRuntimeCache,
   getStoryChapters,
-  ANNOUNCEMENTS,
+  isAnnouncementDeleted,
 } from '../../data/mockData';
-import { getStoredStories, syncAllLocalToFirestore } from '../../lib/realtimeService';
+import { getStoredStories, getStoredAnnouncements, saveStoredAnnouncements, syncAllLocalToFirestore } from '../../lib/realtimeService';
 import {
   isFirestoreEnabled,
   setFirestoreEnabled,
@@ -227,11 +227,7 @@ export const AuthorSyncTab: React.FC<AuthorSyncTabProps> = ({ onFeedback, onRefr
         fullChapters[s.id] = rawChapters[s.id] || getStoryChapters(s.id) || [];
       });
 
-      let announcements: Announcement[] = ANNOUNCEMENTS;
-      try {
-        const raw = localStorage.getItem('mel_published_announcements');
-        if (raw) announcements = JSON.parse(raw);
-      } catch {}
+      const announcements: Announcement[] = getStoredAnnouncements();
 
       // 1. Stories
       const resStories = await commitGithubDataFile('stories.json', stories, 'Đồng bộ toàn bộ danh sách truyện [skip ci]');
@@ -281,8 +277,9 @@ export const AuthorSyncTab: React.FC<AuthorSyncTabProps> = ({ onFeedback, onRefr
         }
       }
 
-      if (Array.isArray(remoteAnnouncements) && remoteAnnouncements.length > 0) {
-        localStorage.setItem('mel_published_announcements', JSON.stringify(remoteAnnouncements));
+      if (Array.isArray(remoteAnnouncements)) {
+        const cleanRemote = remoteAnnouncements.filter((a) => !isAnnouncementDeleted(a.id));
+        saveStoredAnnouncements(cleanRemote);
       }
 
       if (Array.isArray(remotePlaylist) && remotePlaylist.length > 0) {

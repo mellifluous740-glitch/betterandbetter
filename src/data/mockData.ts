@@ -9,6 +9,56 @@ export const DELETED_OR_LEGACY_STORY_IDS = new Set([
   'duoi-tan-cay-mua-ha',
 ]);
 
+export const DELETED_OR_LEGACY_ANNOUNCEMENT_IDS = new Set([
+  'tb-1',
+  'tb-2',
+  'tb-3',
+  'tb-4',
+  'tb-5',
+]);
+
+export const isAnnouncementDeleted = (annId?: string): boolean => {
+  if (!annId) return true;
+  const cleanId = annId.trim();
+  if (DELETED_OR_LEGACY_ANNOUNCEMENT_IDS.has(cleanId)) return true;
+  try {
+    const raw = localStorage.getItem('mel_deleted_announcement_ids');
+    if (raw) {
+      const list: string[] = JSON.parse(raw);
+      if (Array.isArray(list) && list.includes(cleanId)) return true;
+    }
+  } catch {}
+  return false;
+};
+
+export const recordAnnouncementDeleted = (annId: string): void => {
+  if (!annId) return;
+  const cleanId = annId.trim();
+  DELETED_OR_LEGACY_ANNOUNCEMENT_IDS.add(cleanId);
+  try {
+    const raw = localStorage.getItem('mel_deleted_announcement_ids');
+    const list: string[] = raw ? JSON.parse(raw) : [];
+    if (!list.includes(cleanId)) {
+      list.push(cleanId);
+      localStorage.setItem('mel_deleted_announcement_ids', JSON.stringify(list));
+    }
+  } catch {}
+};
+
+export const unmarkAnnouncementDeleted = (annId: string): void => {
+  if (!annId) return;
+  const cleanId = annId.trim();
+  DELETED_OR_LEGACY_ANNOUNCEMENT_IDS.delete(cleanId);
+  try {
+    const raw = localStorage.getItem('mel_deleted_announcement_ids');
+    if (raw) {
+      const list: string[] = JSON.parse(raw);
+      const filtered = list.filter((id) => id !== cleanId);
+      localStorage.setItem('mel_deleted_announcement_ids', JSON.stringify(filtered));
+    }
+  } catch {}
+};
+
 export const isStoryDeleted = (storyId?: string): boolean => {
   if (!storyId) return true;
   const cleanId = storyId.trim().toLowerCase();
@@ -256,50 +306,7 @@ export const getStoryChapters = (storyId: string): Chapter[] => {
   return [];
 };
 
-export const ANNOUNCEMENTS: Announcement[] = [
-  {
-    id: 'tb-1',
-    title: 'Bảng tin nhà Mel: Về lịch đăng chương và bảo vệ bản quyền phi lợi nhuận',
-    tag: 'Thông báo',
-    date: '14/09/2026',
-    isPinned: true,
-    content:
-      'Xin chào các bạn độc giả dễ thương! Tớ là Mellifluous. Trang blog này là nơi tớ lưu giữ những bản dịch truyện ngôn tình thanh xuân mùa hè mà tớ yêu thích. Do công việc bận rộn nên tớ sẽ cập nhật chương truyện ngẫu hứng vào các buổi tối cuối tuần. Toàn bộ truyện là phi lợi nhuận, nghiêm cấm reup hoặc thương mại hóa dưới mọi hình thức nhé!',
-  },
-  {
-    id: 'tb-2',
-    title: 'Quy tắc đặt Password & Gợi ý giải mã chương VIP',
-    tag: 'Lưu ý',
-    date: '10/09/2026',
-    isPinned: true,
-    content:
-      'Tất cả pass ở nhà Mel đều siêu dễ thương và liên quan trực tiếp đến chi tiết trong truyện (viết thường không dấu, không cách). Các bạn bấm vào tab "Password" trên thanh lá thư để xem chi tiết gợi ý nhé! Nếu gặp khó khăn hãy để lại bình luận ở mục Hỏi đáp, Mel sẽ hint thêm nha ~',
-  },
-  {
-    id: 'tb-3',
-    title: 'Cập nhật hệ thống: Đồng bộ trạng thái và danh sách chương truyện mới',
-    tag: 'Thông báo',
-    date: '17/09/2026',
-    content:
-      'Hệ thống blog đã được nâng cấp tối ưu hóa đồng bộ dữ liệu thời gian thực trên mọi thiết bị và trình duyệt. Các tác phẩm đã hoàn và đang ra được tự động cập nhật chuẩn xác nhất.',
-  },
-  {
-    id: 'tb-4',
-    title: 'Mở chuyên mục Hòm thư bạn đọc & Tâm sự mùa hè',
-    tag: 'Nhắc nhở',
-    date: '20/08/2026',
-    content:
-      'Chuyên mục "Thư gửi độc giả & Tình cảm" đã chính thức tiếp nhận những bức thư từ độc giả thân yêu. Bạn có thể gửi gắm tâm sự, cảm nghĩ về từng nhân vật hoặc chia sẻ kỷ niệm thanh xuân của chính mình!',
-  },
-  {
-    id: 'tb-5',
-    title: 'Chào đón bạn đọc ghé thăm không gian lofi Mellifluous',
-    tag: 'Thông báo',
-    date: '01/08/2026',
-    content:
-      'Chúc các bạn độc giả có những phút giây an yên, thư thái cùng những trang truyện ngọt ngào, tiếng đàn lofi du dương và những cánh hoa anh đào rơi dịu dàng.',
-  },
-];
+export const ANNOUNCEMENTS: Announcement[] = [];
 
 export const RECENT_UPDATES: RecentUpdate[] = [];
 

@@ -104,7 +104,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
         {/* Announcements List */}
         <div className="space-y-2.5">
-          {displayedAnnouncements.map((notice, idx) => {
+          {displayedAnnouncements.length === 0 ? (
+            <div className="p-4 text-center rounded-xl bg-white/60 dark:bg-stone-850/60 border border-dashed border-stone-200 dark:border-stone-700/80 text-xs text-stone-500 dark:text-stone-400 font-sans">
+              Chưa có thông báo mới nào từ Mel.
+            </div>
+          ) : (
+            displayedAnnouncements.map((notice, idx) => {
             const isOlder = idx >= INITIAL_VISIBLE_COUNT;
             return (
               <div
@@ -156,7 +161,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 </p>
               </div>
             );
-          })}
+          }))}
         </div>
 
         {/* Nút Xem thêm để hiện các thông báo cũ hơn */}
