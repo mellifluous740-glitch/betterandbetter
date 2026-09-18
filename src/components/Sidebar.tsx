@@ -201,7 +201,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 <span className="text-xs">🌸</span>
               </h3>
               <p className="text-[11px] text-stone-500 dark:text-stone-400 font-sans">
-                Đổ xuống danh mục để đọc ngay
+                Bấm chọn danh mục
               </p>
             </div>
           </div>
@@ -216,9 +216,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
             <span className="flex items-center gap-1">
               <span>Danh mục truyện:</span>
               <span className="text-pink-500 dark:text-pink-400 text-[10px]">✦</span>
-            </span>
-            <span className="text-[11px] text-pink-600 dark:text-pink-300 font-medium">
-              Kèm thanh trượt & tìm kiếm
             </span>
           </label>
           <SidebarStoryDropdown
@@ -259,7 +256,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 Chương mới cập nhật
               </h3>
               <p className="text-[11px] text-stone-500 dark:text-stone-400 font-sans">
-                Theo dòng thời gian đăng bài
+                Nhà Mell có gì mới?
               </p>
             </div>
           </div>
