@@ -92,7 +92,7 @@ export const CompletedStoriesView: React.FC<CompletedStoriesViewProps> = ({
             </h1>
 
             <p className="text-xs sm:text-sm text-stone-600 dark:text-stone-300 font-sans leading-relaxed">
-              CÁC tác phẩm đã hoàn thành, một số tác phẩm đã cập nhật Ebook. Cả nhà đừng quên bày tỏ cảm xúc bằng cách đánh giá và thả tim cho Mell nhaaa
+              CÁC tác phẩm đã hoàn thành, một số tác phẩm đã cập nhật Ebook. Cả nhà đừng quên ủng hộ Mell bằng cách đánh giá và thả tim cho Mell nhaaa
             </p>
 
             {/* Quick Stats Pill */}
