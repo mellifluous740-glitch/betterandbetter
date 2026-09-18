@@ -43,12 +43,12 @@ export const PasswordPage: React.FC<PasswordPageProps> = ({ stories, onOpenStory
     ) {
       setTestResult({
         success: true,
-        message: `🌸 Chính xác rồi nàng ơi! Đây đúng là mật khẩu của "${selectedItem.chapter.title}". Nàng có thể vào đọc ngay nhé!`,
+        message: `🌸 Giỏi quá bồ ui ơi! Đúng mật khẩu của "${selectedItem.chapter.title}" rùi. nha. Chúc bồ có trải nghiệm đọc truyện vui vẻ nhó`,
       });
     } else {
       setTestResult({
         success: false,
-        message: 'Chưa chính xác rồi. Hãy đọc lại gợi ý riêng của chương này và kiểm tra xem có dấu cách hay chữ in hoa không nhé!',
+        message: 'Sai mất tiêu rùi, bồ đọc lại thật kỹ gợi ý và thử lại nhaaa!',
       });
     }
   };
@@ -69,7 +69,7 @@ export const PasswordPage: React.FC<PasswordPageProps> = ({ stories, onOpenStory
               Góc Hướng Dẫn & Gợi Ý Password
             </h1>
             <p className="text-xs sm:text-sm text-amber-800 dark:text-amber-300 font-serif italic">
-              Bức thư ngọt ngào gửi các nàng đọc truyện tại better and better
+              Một vài lưu ý nho nhỏ
             </p>
           </div>
         </div>
@@ -80,7 +80,7 @@ export const PasswordPage: React.FC<PasswordPageProps> = ({ stories, onOpenStory
             <span>Tại sao nhà Mel lại cài mật khẩu?</span>
           </h2>
           <p className="text-sm leading-relaxed text-stone-700 dark:text-stone-300 font-sans">
-            Truyện trong nhà được chuyển ngữ dưới sự cho phép của tác giả với mục đích phi lợi nhuận. Việc cài password nhẹ nhàng cho một số chương then chốt là để <em>bảo vệ công sức của cả tác giả lẫn dịch giả</em>, tránh bị các trang web reup tự động quét bài làm biến mất truyện.
+            Truyện trong nhà được chuyển ngữ dưới sự cho phép của tác giả với mục đích phi lợi nhuận. Và <em>TẤT CẢ CÁC TRUYỆN ĐỀU CÓ PASS, KỂ CẢ TRUYỆN KHÔNG SET VIP</em><br>Việc cài password là để <em>bảo vệ công sức của cả tác giả lẫn dịch giả</em></br>
           </p>
         </div>
       </div>
