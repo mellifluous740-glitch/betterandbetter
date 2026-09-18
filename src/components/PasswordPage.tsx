@@ -97,7 +97,7 @@ export const PasswordPage: React.FC<PasswordPageProps> = ({ stories, onOpenStory
           {
             num: '02',
             title: 'Password đặc biệt',
-            desc: 'Để lấy password, mọi người vui lòng ủng hộ tác giả với giá trị tương đương khi mua tác phẩm gốc. Lưu ý MÌNH KHÔNG NHẬN NẠP HỘ. Các truyện có pass đặc biệt tớ đã note kỹ trong giới thiệu truyện.',
+            desc: 'Để lấy password, mọi người vui lòng ủng hộ tác giả và tác phẩm gốc tại Douban, Qidian, Jjwxc. Các truyện có pass đặc biệt tớ đã note kỹ trong giới thiệu truyện.',
             icon: '🌸',
           },
           {
