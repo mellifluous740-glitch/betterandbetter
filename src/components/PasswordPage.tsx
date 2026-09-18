@@ -80,11 +80,9 @@ export const PasswordPage: React.FC<PasswordPageProps> = ({ stories, onOpenStory
             <span>Tại sao nhà Mel lại cài mật khẩu?</span>
           </h2>
           <p className="text-sm leading-relaxed text-stone-700 dark:text-stone-300 font-sans">
-            Truyện trong nhà được chuyển ngữ dưới sự cho phép của tác giả với mục đích phi lợi nhuận. Và <em>TẤT CẢ CÁC TRUYỆN ĐỀU CÓ PASS, KỂ CẢ TRUYỆN KHÔNG SET VIP</em><br>Việc cài password là để <em>bảo vệ công sức của cả tác giả lẫn dịch giả</em>
+            Truyện trong nhà được chuyển ngữ dưới sự cho phép của tác giả với mục đích phi lợi nhuận. Và <em>TẤT CẢ CÁC TRUYỆN ĐỀU CÓ PASS, KỂ CẢ TRUYỆN KHÔNG SET VIP</em><br>Việc cài password là để <em>bảo vệ công sức của cả tác giả lẫn dịch giả</em></br>
           </p>
-
         </div>
-      </div>
 
       {/* 4 Golden Rules for Password */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
