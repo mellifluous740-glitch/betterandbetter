@@ -135,7 +135,7 @@ export const SidebarStoryDropdown: React.FC<SidebarStoryDropdownProps> = ({
 
           <div className="min-w-0 flex-1">
             <span className="text-[10px] uppercase font-bold tracking-wider text-pink-600 dark:text-pink-400 flex items-center gap-1">
-              <span>Tác phẩm chọn lọc</span>
+              <span>Ttruyện trong nhà</span>
               <Sparkles className="w-2.5 h-2.5" />
             </span>
 
