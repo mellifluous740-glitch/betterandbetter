@@ -43,12 +43,12 @@ export const PasswordPage: React.FC<PasswordPageProps> = ({ stories, onOpenStory
     ) {
       setTestResult({
         success: true,
-        message: `🌸 Chính xác rồi nàng ơi! Đây đúng là mật khẩu của "${selectedItem.chapter.title}". Nàng có thể vào đọc ngay nhé!`,
+        message: `🌸 Giỏi quá bồ ui ơi! Mật khẩu của "${selectedItem.chapter.title}" đúng gòi nha. Chúc bồ có trải nghiệm đọc truyện vui vẻ nhóoo!`,
       });
     } else {
       setTestResult({
         success: false,
-        message: 'Chưa chính xác rồi. Hãy đọc lại gợi ý riêng của chương này và kiểm tra xem có dấu cách hay chữ in hoa không nhé!',
+        message: 'Sai mất tiêu rui 🥺. Bồ hãy đọc kỹ lại gợi ý riêng của chương này và kiểm tra lại nhaaa!',
       });
     }
   };
@@ -80,8 +80,9 @@ export const PasswordPage: React.FC<PasswordPageProps> = ({ stories, onOpenStory
             <span>Tại sao nhà Mel lại cài mật khẩu?</span>
           </h2>
           <p className="text-sm leading-relaxed text-stone-700 dark:text-stone-300 font-sans">
-            Truyện trong nhà được chuyển ngữ dưới sự cho phép của tác giả với mục đích phi lợi nhuận. Việc cài password nhẹ nhàng cho một số chương then chốt là để <em>bảo vệ công sức của cả tác giả lẫn dịch giả</em>, tránh bị các trang web reup tự động quét bài làm biến mất truyện.
+            Truyện trong nhà được chuyển ngữ dưới sự cho phép của tác giả với mục đích phi lợi nhuận. Và <em>TẤT CẢ CÁC TRUYỆN ĐỀU CÓ PASS, KỂ CẢ TRUYỆN KHÔNG SET VIP</em><br>Việc cài password là để <em>bảo vệ công sức của cả tác giả lẫn dịch giả</em>
           </p>
+
         </div>
       </div>
 
@@ -90,26 +91,26 @@ export const PasswordPage: React.FC<PasswordPageProps> = ({ stories, onOpenStory
         {[
           {
             num: '01',
-            title: 'Viết thường',
-            desc: 'Tất cả pass đều viết thường, không bật CapsLock (trừ khi có ghi chú đặc biệt).',
+            title: 'Không chia sẻ hay public password',
+            desc: 'Ai cũng có bí mật của riêng mình đúng hong nè? Nên có gì mình giữ bí mật với nhau thui nha, password không khó quá đâu.',
             icon: 'abc',
           },
           {
             num: '02',
-            title: 'Không dấu',
-            desc: 'Viết tiếng Việt không dấu (ví dụ: "hoa anh đào" -> "hoa anh dao").',
+            title: 'Password donate',
+            desc: 'Để lấy pass, mọi người vui lòng <em>ủng hộ tác giả bằng cách tặng quà cho tác giả</em> với giá trị tương đương khi mua tác phẩm gốc. <em>TỚ KHÔNG NHẬN DONATE HAY NẠP HỘ</em>. Các truyện có pass này tớ đã note rõ trong giới thiệu, mọi người chú ý nha.',
             icon: '🌸',
           },
           {
             num: '03',
-            title: 'Không dấu cách',
-            desc: 'Nếu câu trả lời có nhiều từ, hãy viết liền không dấu cách (vd: "muahenamay").',
+            title: 'Chương set pass',
+            desc: 'Với các truyện có trả phí, tớ sẽ set pass từ chương có vip trở đi.',
             icon: '✏️',
           },
           {
             num: '04',
-            title: 'Đọc kỹ văn án & C.1',
-            desc: '90% câu trả lời đều nằm ngay ở tên trường học, tên món đồ kỷ niệm của 2 nhân vật chính.',
+            title: 'Hỏi về pass',
+            desc: 'Chỉ chấp nhận comment, tin nhắn hỏi về pass một cách lịch sự và có đầu đuôi, chủ ngữ vị ngữ rõ ràng.',
             icon: '📖',
           },
         ].map((rule) => (
@@ -185,7 +186,7 @@ export const PasswordPage: React.FC<PasswordPageProps> = ({ stories, onOpenStory
             <span className="text-base">🧪</span>
           </h2>
           <p className="text-xs text-stone-600 dark:text-stone-300 font-sans">
-            Nàng chọn đúng chương muốn đọc và thử gõ câu trả lời vào đây xem đã đúng định dạng của nhà Mel chưa nhé!
+            Bồ chọn đúng chương muốn đọc và thử gõ câu trả lời vào đây xem đã đúng định dạng của nhà Mel chưa nhé!
           </p>
         </div>
 
