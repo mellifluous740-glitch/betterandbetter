@@ -92,7 +92,7 @@ export const AuthorPublishModal: React.FC<AuthorPublishModalProps> = ({
   announcements,
   onStoriesUpdated,
 }) => {
-  const { user, isAuthor, openAuthModal, logout, quickAuthorLogin } = useAuth();
+  const { user, isAuthor, openAuthModal, logout } = useAuth();
   
   type TabType =
     | 'newStory'
@@ -222,19 +222,9 @@ export const AuthorPublishModal: React.FC<AuthorPublishModalProps> = ({
           <div className="pt-2 space-y-2.5">
             <button
               type="button"
-              id="instant-author-login-btn"
-              onClick={() => quickAuthorLogin('mellifluous740@gmail.com')}
-              className="w-full py-2.5 px-4 rounded-xl bg-gradient-to-r from-pink-500 to-rose-500 hover:from-pink-600 hover:to-rose-600 text-white text-xs sm:text-sm font-bold transition-all cursor-pointer shadow-md flex items-center justify-center gap-2"
-            >
-              <Sparkles className="w-4 h-4 text-amber-200" />
-              <span>⚡ Kích hoạt quyền Tác giả Mellifluous ngay</span>
-            </button>
-
-            <button
-              type="button"
               id="login-author-google-btn"
               onClick={openAuthModal}
-              className="w-full py-2.5 px-4 rounded-xl bg-pink-50 dark:bg-stone-800 hover:bg-pink-100 dark:hover:bg-stone-700 text-pink-700 dark:text-pink-300 text-xs sm:text-sm font-semibold transition-colors cursor-pointer border border-pink-200 dark:border-stone-700 flex items-center justify-center gap-2"
+              className="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-pink-500 to-rose-500 hover:from-pink-600 hover:to-rose-600 text-white text-xs sm:text-sm font-bold shadow-md transition-all cursor-pointer flex items-center justify-center gap-2"
             >
               <LogIn className="w-4 h-4" />
               <span>{user ? 'Đổi sang tài khoản tác giả khác' : 'Đăng nhập Google / Email Tác Giả'}</span>

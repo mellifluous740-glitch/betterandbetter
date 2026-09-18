@@ -29,11 +29,10 @@ export const AuthModal: React.FC = () => {
     signInWithEmail,
     registerWithEmail,
     quickReaderLogin,
-    quickAuthorLogin,
     logout,
   } = useAuth();
 
-  const [activeTab, setActiveTab] = useState<'google' | 'guest' | 'email_login' | 'email_register' | 'author'>('google');
+  const [activeTab, setActiveTab] = useState<'google' | 'guest' | 'email_login' | 'email_register'>('google');
   const [guestNickname, setGuestNickname] = useState('');
   const [emailOrUsername, setEmailOrUsername] = useState('');
   const [email, setEmail] = useState('');
@@ -316,7 +315,7 @@ export const AuthModal: React.FC = () => {
               </div>
 
               {/* Tab Selector */}
-              <div className="grid grid-cols-3 sm:grid-cols-5 gap-1 p-1 rounded-xl bg-stone-100 dark:bg-stone-800 border border-stone-200 dark:border-stone-700 text-xs font-medium">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-1 p-1 rounded-xl bg-stone-100 dark:bg-stone-800 border border-stone-200 dark:border-stone-700 text-xs font-medium">
                 <button
                   type="button"
                   onClick={() => setActiveTab('google')}
@@ -360,17 +359,6 @@ export const AuthModal: React.FC = () => {
                   }`}
                 >
                   Đăng ký
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setActiveTab('author')}
-                  className={`py-1.5 px-2 rounded-lg text-center transition-all cursor-pointer truncate ${
-                    activeTab === 'author'
-                      ? 'bg-gradient-to-r from-pink-500 to-rose-500 text-white font-bold shadow-2xs'
-                      : 'text-pink-600 dark:text-pink-400 font-medium hover:text-pink-700'
-                  }`}
-                >
-                  ⚡ Tác giả
                 </button>
               </div>
 
@@ -659,36 +647,6 @@ export const AuthModal: React.FC = () => {
                     <ArrowRight className="w-3.5 h-3.5" />
                   </button>
                 </form>
-              )}
-
-              {/* Tab 5: Author Fast Access */}
-              {activeTab === 'author' && (
-                <div className="space-y-4 p-4 rounded-2xl bg-gradient-to-br from-pink-50/80 via-rose-50/40 to-amber-50/40 dark:from-stone-800 dark:via-pink-950/20 dark:to-stone-800 border border-pink-200/80 dark:border-pink-900/50">
-                  <div className="flex items-center gap-2 text-xs font-bold text-pink-700 dark:text-pink-300">
-                    <Sparkles className="w-4 h-4 text-pink-500" />
-                    <span>Bàn làm việc Tác giả Mellifluous</span>
-                  </div>
-                  <p className="text-xs text-stone-600 dark:text-stone-300 leading-relaxed">
-                    Dành riêng cho Tác giả <strong>Mellifluous</strong> và Ban quản trị để đăng tác phẩm mới, cập nhật các chương truyện, gửi thông báo và quản lý tương tác với độc giả.
-                  </p>
-
-                  <div className="pt-2 space-y-2">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        quickAuthorLogin('mellifluous740@gmail.com');
-                        closeAuthModal();
-                      }}
-                      className="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-pink-500 via-rose-500 to-pink-600 hover:from-pink-600 hover:to-rose-600 text-white text-xs sm:text-sm font-bold shadow-md transition-all cursor-pointer flex items-center justify-center gap-2"
-                    >
-                      <Sparkles className="w-4 h-4 text-amber-200" />
-                      <span>⚡ Kích hoạt quyền Tác giả Mellifluous ngay</span>
-                    </button>
-                    <p className="text-[11px] text-center text-stone-500 dark:text-stone-400">
-                      Tự động cấp quyền quản trị Studio với email mellifluous740@gmail.com
-                    </p>
-                  </div>
-                </div>
               )}
             </div>
           )}

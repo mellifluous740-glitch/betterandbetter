@@ -103,7 +103,6 @@ interface AuthContextType {
   signInWithGoogleCredential: (idToken: string) => Promise<void>;
   signInWithEmail: (emailOrUsername: string, pass: string) => Promise<void>;
   registerWithEmail: (email: string, pass: string, name: string, username?: string) => Promise<void>;
-  quickAuthorLogin: (authorEmail: string) => void;
   quickReaderLogin: (nickname: string) => void;
   logout: () => Promise<void>;
 }
@@ -544,24 +543,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         }
       }
 
-      // 4. Ultimate Resilient Author Emergency Fallback (when Firestore Spark quota is exhausted)
-      const isKnownAuthorEmail = AUTHOR_EMAILS.includes(emailToUse);
-      const isAuthorUsername = inputStr.toLowerCase() === 'mellifluous';
-      if (isKnownAuthorEmail || isAuthorUsername) {
-        // Allow author access with default master passcodes or any login attempt during quota downtime
-        const cleanPass = pass.trim();
-        if (
-          cleanPass === 'mellifluous' ||
-          cleanPass === '2026' ||
-          cleanPass === 'admin' ||
-          cleanPass.length >= 4
-        ) {
-          quickAuthorLogin(isKnownAuthorEmail ? emailToUse : 'mellifluous740@gmail.com');
-          return;
-        }
-      }
-
-      throw new Error(`Không tìm thấy tài khoản "${inputStr}". Nếu bạn là Tác giả hoặc Độc giả mới, vui lòng chuyển sang tab "Đăng ký" hoặc dùng tính năng Đăng nhập Nhanh!`);
+      throw new Error(`Không tìm thấy tài khoản "${inputStr}". Vui lòng kiểm tra lại tên tài khoản / mật khẩu hoặc đăng nhập qua Google!`);
     } catch (err: any) {
       console.error('Email sign in error:', err);
       throw err;
@@ -705,38 +687,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   };
 
-  // Quick switch / Direct sign-in for Author & Collaborators
-  const quickAuthorLogin = (authorEmail: string) => {
-    refreshSessionActivity();
-    const cleanEmail = authorEmail.toLowerCase().trim();
-    const isMain =
-      cleanEmail === 'cuncondangiu07@gmail.com' ||
-      cleanEmail.split('@')[0] === 'cuncondangiu07' ||
-      cleanEmail === 'meomeoxinhxinh07@gmail.com' ||
-      cleanEmail.split('@')[0] === 'meomeoxinhxinh07' ||
-      cleanEmail.split('@')[0] === 'nhatlinhpham010194' ||
-      cleanEmail.split('@')[0] === 'maianhpham927' ||
-      cleanEmail.split('@')[0] === 'mellifluous740' ||
-      cleanEmail.split('@')[0] === 'vivi60810';
-    const appUser: AppUser = {
-      uid: `author_${cleanEmail.replace(/[^a-zA-Z0-9]/g, '_')}`,
-      email: cleanEmail,
-      displayName: isMain ? 'Mellifluous (Tác giả chính)' : `Cộng sự (${cleanEmail.split('@')[0]})`,
-      photoURL: null,
-      isAuthor: true,
-      isMainAuthor: isMain,
-      isCollaborator: !isMain,
-      role: isMain ? 'author' : 'collaborator',
-      roleTitle: isMain ? 'Tác giả • Mellifluous' : 'Cộng sự • Ban quản trị',
-      roleBadge: isMain ? 'Tác giả' : 'Cộng sự',
-    };
-    setUser(appUser);
-    try {
-      localStorage.setItem('mel_user_session', JSON.stringify(appUser));
-    } catch {}
-    closeAuthModal();
-  };
-
   // Quick sign-in for Readers / Guests
   const quickReaderLogin = (nickname: string) => {
     refreshSessionActivity();
@@ -796,7 +746,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         signInWithGoogleCredential,
         signInWithEmail,
         registerWithEmail,
-        quickAuthorLogin,
         quickReaderLogin,
         logout,
       }}
