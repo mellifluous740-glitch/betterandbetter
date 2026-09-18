@@ -90,26 +90,26 @@ export const PasswordPage: React.FC<PasswordPageProps> = ({ stories, onOpenStory
         {[
           {
             num: '01',
-            title: 'Viết thường',
-            desc: 'Tất cả pass đều viết thường, không bật CapsLock (trừ khi có ghi chú đặc biệt).',
+            title: 'Không chia sẻ hay public password',
+            desc: 'Ai cũng có bí mật của riêng mình đúng hong nè? Nên có gì mình giữ bí mật với nhau thui nha, password không khó quá đâu.',
             icon: 'abc',
           },
           {
             num: '02',
-            title: 'Không dấu',
-            desc: 'Viết tiếng Việt không dấu (ví dụ: "hoa anh đào" -> "hoa anh dao").',
+            title: 'Password ẩn',
+            desc: 'Để lấy pass, mọi người vui lòng <em>ủng hộ tác giả bằng cách tặng quà cho tác giả</em> với giá trị tương đương khi mua tác phẩm gốc. <em>TỚ KHÔNG NHẬN DONATE HAY NẠP HỘ</em>. Các truyện có pass này tớ đã note rõ trong giới thiệu, mọi người chú ý nha.',
             icon: '🌸',
           },
           {
             num: '03',
-            title: 'Không dấu cách',
-            desc: 'Nếu câu trả lời có nhiều từ, hãy viết liền không dấu cách (vd: "muahenamay").',
+            title: 'Hỏi về pass',
+            desc: 'Chỉ chấp nhận comment, tin nhắn hỏi về pass một cách lịch sự và có đầu đuôi, chủ ngữ vị ngữ rõ ràng.',
             icon: '✏️',
           },
           {
             num: '04',
-            title: 'Đọc kỹ văn án & C.1',
-            desc: '90% câu trả lời đều nằm ngay ở tên trường học, tên món đồ kỷ niệm của 2 nhân vật chính.',
+            title: 'Cách set pass',
+            desc: 'Với các truyện có trả phí, tớ sẽ set pass từ chương có vip trở đi.',
             icon: '📖',
           },
         ].map((rule) => (
@@ -221,7 +221,7 @@ export const PasswordPage: React.FC<PasswordPageProps> = ({ stories, onOpenStory
                 type="text"
                 value={testInput}
                 onChange={(e) => setTestInput(e.target.value)}
-                placeholder="Ví dụ: cayphong hoặc tieudau..."
+                placeholder="Không dấu, không cách...."
                 className="w-full px-3.5 py-2.5 rounded-xl bg-white dark:bg-stone-800 border border-stone-300 dark:border-stone-700 text-stone-800 dark:text-stone-100 text-xs sm:text-sm focus:ring-2 focus:ring-pink-400"
               />
             </div>
