@@ -186,7 +186,7 @@ export const AuthorSyncTab: React.FC<AuthorSyncTabProps> = ({ onFeedback, onRefr
     setIsTestingGithub(false);
     setGithubTestResult(result);
 
-    if (result.success) {
+    if (result.success && result.canWrite) {
       onFeedback('success', result.message);
     } else {
       onFeedback('error', result.message);

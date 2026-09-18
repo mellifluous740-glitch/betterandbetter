@@ -507,15 +507,23 @@ export async function testGithubConnection(): Promise<{
 
     const repoData = await repoRes.json();
     const canWrite = repoData.permissions?.push === true || repoData.permissions?.admin === true;
+    const isOwner = repoData.owner?.login?.toLowerCase() === username.toLowerCase();
+
+    let message = '';
+    if (canWrite) {
+      message = `Đã kết nối thành công với kho lưu trữ ${repoData.full_name} (@${username}). Tài khoản có đầy đủ quyền Ghi (Push/Write)!`;
+    } else if (!isOwner) {
+      message = `Token thuộc tài khoản @${username}, nhưng kho bạn đang nhập là "${repoData.full_name}" (thuộc sở hữu của @${repoData.owner?.login || 'người khác'}). Hãy đổi ô "Kho lưu trữ GitHub" thành "${username}/${repoData.name}"!`;
+    } else {
+      message = `Đã kết nối với @${username}, nhưng tài khoản CHỈ CÓ QUYỀN ĐỌC (Read-only) trên kho ${repoData.full_name}. Hãy kiểm tra lại quyền trong Token (chọn scope "repo")!`;
+    }
 
     return {
       success: true,
       username,
       repoName: repoData.full_name,
       canWrite,
-      message: canWrite
-        ? `Đã kết nối thành công với kho lưu trữ ${repoData.full_name} (@${username}). Tài khoản có đầy đủ quyền Ghi (Push/Write)!`
-        : `Đã kết nối với @${username}, nhưng tài khoản CHỈ CÓ QUYỀN ĐỌC (Read-only). Cần cấp quyền "Contents: Read and write" trong Token!`,
+      message,
     };
   } catch (err: any) {
     return {
