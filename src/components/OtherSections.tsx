@@ -97,9 +97,9 @@ export const OtherSections: React.FC = () => {
 
   const availableTags = [
     '🌸 Lời chúc & Cảm ơn',
-    '☕ Tâm sự mùa hè',
+    '☕ Tâm sự cùng Mell',
     '📖 Đề xuất truyện mới',
-    '💭 Trải lòng thầm kín',
+    '💭 Đóng góp ý kiến',
   ];
 
   const handleSendConfession = async (e: React.FormEvent) => {
@@ -205,13 +205,13 @@ export const OtherSections: React.FC = () => {
           <div>
             <div className="flex items-center gap-2 text-xs uppercase font-semibold text-sky-600 dark:text-sky-400">
               <span>🎐</span>
-              <span>Góc nhỏ dành cho những tâm hồn đồng điệu</span>
+              <span>Góc nhỏ Mell dành cho mọi người</span>
             </div>
             <h1 className="font-serif text-2xl sm:text-3xl font-bold text-stone-800 dark:text-stone-100 mt-1">
-              Một Số Mục Khác Của Nhà Mel
+              Góc nghỉ ngơi của nhà Mell
             </h1>
             <p className="text-xs sm:text-sm text-stone-600 dark:text-stone-300 font-serif italic mt-1">
-              Nhật ký chiếc thuyền nhỏ, hòm thư tâm sự (thầm kín & công khai), playlist mùa hạ
+              Nhật ký của Mell, nơi mọi người tâm sự, trải lòng, góp ý và nhắn gửi bất cứ điều gì, còn có playlist nhạc cho mọi người chọn nữa nè
             </p>
           </div>
 
@@ -239,7 +239,7 @@ export const OtherSections: React.FC = () => {
                   : 'text-stone-600 dark:text-stone-300 hover:bg-stone-100 dark:hover:bg-stone-700'
               }`}
             >
-              Playlist mùa hạ
+              Playlist
             </button>
             <button
               type="button"
@@ -272,7 +272,7 @@ export const OtherSections: React.FC = () => {
 
             <div className="space-y-4 font-serif text-stone-700 dark:text-stone-300 text-sm sm:text-base leading-relaxed indent-6">
               <p>
-                Có những ngày trở về nhà sau giờ làm việc mệt nhoài, mình lại mở máy tính lên, ngồi gõ từng dòng chữ dịch của những câu chuyện tình thanh xuân thuần khiết. Giữa cuộc sống bận rộn nhiều áp lực, việc đắm mình vào một góc nhỏ có hoa anh đào, có tiếng ve mùa hè, có sự chân thành của lứa tuổi mười bảy chính là liều thuốc chữa lành dịu êm nhất.
+                Càng lớn, mình lạầngngf
               </p>
               <p>
                 Trang blog này được lập ra như một chiếc thuyền nhỏ dự phòng. Thuyền tuy nhỏ nhưng hy vọng có thể che chở cho những kỷ niệm đẹp đẽ, mang lại cho bạn một chút ngọt ngào khi nhâm nhi tách trà chiều.
