@@ -130,7 +130,7 @@ export const BackgroundMusicBar: React.FC<BackgroundMusicBarProps> = ({ onOpenAu
           <div className="flex items-center justify-between border-b border-pink-100 dark:border-stone-800 pb-2">
             <div className="flex items-center gap-1.5 text-xs font-semibold text-pink-600 dark:text-pink-400">
               <Sparkles className="w-3.5 h-3.5" />
-              <span>Giai điệu đọc truyện ({tracks.length})</span>
+              <span>List nhạc nhà Mell nè ({tracks.length})</span>
             </div>
             <div className="flex items-center gap-1">
               {onOpenAuthorStudio && isAuthor && (
