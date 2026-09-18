@@ -221,7 +221,7 @@ export const PasswordPage: React.FC<PasswordPageProps> = ({ stories, onOpenStory
                 type="text"
                 value={testInput}
                 onChange={(e) => setTestInput(e.target.value)}
-                placeholder="Ví dụ: cayphong hoặc tieudau..."
+                placeholder="mật khẩu không dấu, không cách..."
                 className="w-full px-3.5 py-2.5 rounded-xl bg-white dark:bg-stone-800 border border-stone-300 dark:border-stone-700 text-stone-800 dark:text-stone-100 text-xs sm:text-sm focus:ring-2 focus:ring-pink-400"
               />
             </div>
