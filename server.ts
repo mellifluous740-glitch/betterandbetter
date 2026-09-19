@@ -20,6 +20,7 @@ import {
   savePlaylist,
   deleteTrack,
   getAllLetters,
+  getDeletedLetterIds,
   saveLetter,
   replyLetter,
   deleteLetter,
@@ -374,6 +375,10 @@ app.delete('/api/playlist/:id', (req: Request, res: Response) => {
 // --- Reader Letters API ---
 app.get('/api/letters', (req: Request, res: Response) => {
   res.json(getAllLetters());
+});
+
+app.get('/api/letters/deleted', (req: Request, res: Response) => {
+  res.json(getDeletedLetterIds());
 });
 
 app.post('/api/letters', (req: Request, res: Response) => {

@@ -25,6 +25,7 @@ const CHAPTERS_FILE = path.join(DATA_DIR, 'chapters.json');
 const ANNOUNCEMENTS_FILE = path.join(DATA_DIR, 'announcements.json');
 const PLAYLIST_FILE = path.join(DATA_DIR, 'playlist.json');
 const LETTERS_FILE = path.join(DATA_DIR, 'letters.json');
+const DELETED_LETTERS_FILE = path.join(DATA_DIR, 'deleted_letters.json');
 const COMMENTS_FILE = path.join(DATA_DIR, 'comments.json');
 const GENRES_FILE = path.join(DATA_DIR, 'genres.json');
 const STATS_FILE = path.join(DATA_DIR, 'stats.json');
@@ -143,6 +144,8 @@ let cachedChapters: Record<string, Chapter[]> = {};
 let cachedAnnouncements: Announcement[] = [];
 let cachedTracks: AudioTrack[] = [];
 let cachedLetters: ReaderLetter[] = [];
+let cachedDeletedLetters: Set<string> = new Set();
+let lastDeletedLettersMtime = 0;
 let cachedComments: RealtimeComment[] = [];
 let cachedGenres: string[] = [];
 
@@ -273,15 +276,28 @@ const reloadAnnouncementsIfChanged = () => {
 
 const reloadLettersIfChanged = () => {
   try {
+    if (fs.existsSync(DELETED_LETTERS_FILE)) {
+      const delStat = fs.statSync(DELETED_LETTERS_FILE);
+      if (delStat.mtimeMs !== lastDeletedLettersMtime) {
+        const delContent = fs.readFileSync(DELETED_LETTERS_FILE, 'utf-8');
+        const parsedDel = JSON.parse(delContent);
+        if (Array.isArray(parsedDel)) {
+          cachedDeletedLetters = new Set(parsedDel);
+        }
+        lastDeletedLettersMtime = delStat.mtimeMs;
+      }
+    }
     if (fs.existsSync(LETTERS_FILE)) {
       const stat = fs.statSync(LETTERS_FILE);
       if (stat.mtimeMs !== lastLettersMtime) {
         const content = fs.readFileSync(LETTERS_FILE, 'utf-8');
         const parsed = JSON.parse(content);
         if (Array.isArray(parsed)) {
-          cachedLetters = parsed.sort(
-            (a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime()
-          );
+          cachedLetters = parsed
+            .filter((l) => l && l.id && !cachedDeletedLetters.has(l.id))
+            .sort(
+              (a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime()
+            );
           lastLettersMtime = stat.mtimeMs;
         }
       }
@@ -389,20 +405,37 @@ export const initDataStore = () => {
   }
 
   // 5. Reader Letters
+  if (fs.existsSync(DELETED_LETTERS_FILE)) {
+    try {
+      const delContent = fs.readFileSync(DELETED_LETTERS_FILE, 'utf-8');
+      const parsedDel = JSON.parse(delContent);
+      if (Array.isArray(parsedDel)) {
+        cachedDeletedLetters = new Set(parsedDel);
+      }
+    } catch {}
+  }
+
   if (fs.existsSync(LETTERS_FILE)) {
     try {
       const content = fs.readFileSync(LETTERS_FILE, 'utf-8');
-      cachedLetters = JSON.parse(content);
-      if (!Array.isArray(cachedLetters) || cachedLetters.length === 0) {
-        cachedLetters = [...DEFAULT_LETTERS];
-        writeJsonSafe(LETTERS_FILE, cachedLetters);
+      const parsed = JSON.parse(content);
+      if (Array.isArray(parsed)) {
+        cachedLetters = parsed.filter((l) => l && l.id && !cachedDeletedLetters.has(l.id));
+      } else {
+        cachedLetters = [];
       }
+      writeJsonSafe(LETTERS_FILE, cachedLetters);
     } catch {
-      cachedLetters = [...DEFAULT_LETTERS];
+      cachedLetters = [];
       writeJsonSafe(LETTERS_FILE, cachedLetters);
     }
   } else {
-    cachedLetters = [...DEFAULT_LETTERS];
+    // Brand new instance only: seed defaults if not explicitly deleted
+    if (cachedDeletedLetters.size === 0) {
+      cachedLetters = [...DEFAULT_LETTERS];
+    } else {
+      cachedLetters = [];
+    }
     writeJsonSafe(LETTERS_FILE, cachedLetters);
   }
 
@@ -638,9 +671,23 @@ export const deleteTrack = (trackId: string): boolean => {
 // Reader Letters Operations
 export const getAllLetters = (): ReaderLetter[] => {
   reloadLettersIfChanged();
-  return [...cachedLetters].sort(
-    (a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime()
-  );
+  return [...cachedLetters]
+    .filter((l) => l && l.id && !cachedDeletedLetters.has(l.id))
+    .sort(
+      (a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime()
+    );
+};
+
+export const getDeletedLetterIds = (): string[] => {
+  return Array.from(cachedDeletedLetters);
+};
+
+export const recordDeletedLetter = (letterId: string): void => {
+  if (!letterId) return;
+  cachedDeletedLetters.add(letterId);
+  writeJsonSafe(DELETED_LETTERS_FILE, Array.from(cachedDeletedLetters));
+  cachedLetters = cachedLetters.filter((l) => l.id !== letterId);
+  writeJsonSafe(LETTERS_FILE, cachedLetters);
 };
 
 export const saveLetter = (letter: ReaderLetter): ReaderLetter => {
@@ -648,6 +695,10 @@ export const saveLetter = (letter: ReaderLetter): ReaderLetter => {
     ...letter,
     createdAt: letter.createdAt || new Date().toISOString(),
   };
+  if (cachedDeletedLetters.has(letter.id)) {
+    cachedDeletedLetters.delete(letter.id);
+    writeJsonSafe(DELETED_LETTERS_FILE, Array.from(cachedDeletedLetters));
+  }
   const filtered = cachedLetters.filter((l) => l.id !== letter.id);
   cachedLetters = [letterWithTime, ...filtered].sort(
     (a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime()
@@ -672,6 +723,9 @@ export const replyLetter = (letterId: string, replyText: string, authorName: str
 };
 
 export const deleteLetter = (letterId: string): boolean => {
+  if (!letterId) return false;
+  cachedDeletedLetters.add(letterId);
+  writeJsonSafe(DELETED_LETTERS_FILE, Array.from(cachedDeletedLetters));
   cachedLetters = cachedLetters.filter((l) => l.id !== letterId);
   writeJsonSafe(LETTERS_FILE, cachedLetters);
   return true;

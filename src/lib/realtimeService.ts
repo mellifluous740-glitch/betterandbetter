@@ -423,22 +423,89 @@ export const INITIAL_SAMPLE_LETTERS: ReaderLetter[] = [
   },
 ];
 
+const DELETED_LETTERS_KEY = 'mel_deleted_letter_ids';
+const memoryDeletedLetterIds = new Set<string>([
+  'sample-letter-1',
+  'sample-letter-2',
+  'sample-letter-3',
+]);
+
+export const getDeletedLetterIds = (): Set<string> => {
+  const set = new Set<string>(memoryDeletedLetterIds);
+  if (typeof window !== 'undefined') {
+    try {
+      const raw = localStorage.getItem(DELETED_LETTERS_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) {
+          parsed.forEach((id: string) => set.add(id));
+        }
+      }
+    } catch {}
+  }
+  return set;
+};
+
+export const isLetterDeleted = (letterId: string): boolean => {
+  if (!letterId) return false;
+  if (memoryDeletedLetterIds.has(letterId)) return true;
+  if (typeof window !== 'undefined') {
+    try {
+      const raw = localStorage.getItem(DELETED_LETTERS_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed) && parsed.includes(letterId)) {
+          memoryDeletedLetterIds.add(letterId);
+          return true;
+        }
+      }
+    } catch {}
+  }
+  return false;
+};
+
+export const recordLetterDeleted = (letterId: string): void => {
+  if (!letterId) return;
+  memoryDeletedLetterIds.add(letterId);
+  if (typeof window !== 'undefined') {
+    try {
+      const raw = localStorage.getItem(DELETED_LETTERS_KEY);
+      const parsed: string[] = raw ? JSON.parse(raw) : [];
+      if (Array.isArray(parsed) && !parsed.includes(letterId)) {
+        parsed.push(letterId);
+        localStorage.setItem(DELETED_LETTERS_KEY, JSON.stringify(parsed));
+      }
+      const cached = localStorage.getItem('mel_reader_letters_cache');
+      if (cached) {
+        const letters = JSON.parse(cached);
+        if (Array.isArray(letters)) {
+          const filtered = letters.filter((l: any) => l && l.id !== letterId);
+          localStorage.setItem('mel_reader_letters_cache', JSON.stringify(filtered));
+        }
+      }
+    } catch {}
+  }
+};
+
 export const activeReaderLetterSubscribers = new Set<(letters: ReaderLetter[]) => void>();
 
 export function getStoredReaderLetters(): ReaderLetter[] {
   try {
     const raw = localStorage.getItem('mel_reader_letters_cache');
-    if (raw) {
+    if (raw !== null) {
       const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      if (Array.isArray(parsed)) {
+        return parsed.filter((l) => l && l.id && !isLetterDeleted(l.id));
+      }
     }
   } catch {}
-  return INITIAL_SAMPLE_LETTERS;
+  return INITIAL_SAMPLE_LETTERS.filter((l) => l && l.id && !isLetterDeleted(l.id));
 }
 
 export function saveStoredReaderLetters(letters: ReaderLetter[]) {
   try {
-    localStorage.setItem('mel_reader_letters_cache', JSON.stringify(letters));
+    const filtered = letters.filter((l) => l && l.id && !isLetterDeleted(l.id));
+    localStorage.setItem('mel_reader_letters_cache', JSON.stringify(filtered));
   } catch {}
 }
 
@@ -674,16 +741,24 @@ export const initServerRealtimeSync = () => {
       }
 
       // E. Reader Letters
-      if (data.letters && Array.isArray(data.letters) && data.letters.length > 0) {
+      if (data.letters && Array.isArray(data.letters)) {
         const currentLetters = getStoredReaderLetters();
         const letterMap = new Map<string, ReaderLetter>();
-        data.letters.forEach((l: ReaderLetter) => letterMap.set(l.id, l));
-        currentLetters.forEach((l) => {
-          if (!letterMap.has(l.id)) letterMap.set(l.id, l);
+        data.letters.forEach((l: ReaderLetter) => {
+          if (l && l.id && !isLetterDeleted(l.id) && !(l as any).deleted) {
+            letterMap.set(l.id, l);
+          }
         });
-        const merged = Array.from(letterMap.values()).sort(
-          (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-        );
+        currentLetters.forEach((l) => {
+          if (!letterMap.has(l.id) && !isLetterDeleted(l.id)) {
+            letterMap.set(l.id, l);
+          }
+        });
+        const merged = Array.from(letterMap.values())
+          .filter((l) => !isLetterDeleted(l.id))
+          .sort(
+            (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+          );
         saveStoredReaderLetters(merged);
         notifyReaderLetterSubscribers(merged);
       }
@@ -846,11 +921,14 @@ export const initServerRealtimeSync = () => {
           saveStoredReaderLetters(next);
           notifyReaderLetterSubscribers(next);
         } else if (msg.type === 'letter_deleted') {
-          const { id } = msg.payload;
-          const current = getStoredReaderLetters();
-          const next = current.filter((l) => l.id !== id);
-          saveStoredReaderLetters(next);
-          notifyReaderLetterSubscribers(next);
+          const { id } = msg.payload || {};
+          if (id) {
+            recordLetterDeleted(id);
+            const current = getStoredReaderLetters();
+            const next = current.filter((l) => l.id !== id && !isLetterDeleted(l.id));
+            saveStoredReaderLetters(next);
+            notifyReaderLetterSubscribers(next);
+          }
         } else if (msg.type === 'letter_liked') {
           const { id, likes } = msg.payload;
           const current = getStoredReaderLetters();
@@ -2148,34 +2226,48 @@ export const subscribeToReaderLetters = (
   // 2. Register to in-memory notification
   activeReaderLetterSubscribers.add(callback);
 
-  // 3. Server API fetch
+  // 3. Server API fetch (with deleted letters synchronization)
   if (typeof window !== 'undefined' && hasBackendServer()) {
-    fetch(buildApiUrl('/api/letters'))
-      .then((res) => (res.ok ? res.json() : null))
-      .then((serverLetters) => {
-        if (Array.isArray(serverLetters) && serverLetters.length > 0) {
-          const current = getStoredReaderLetters();
-          const letterMap = new Map<string, ReaderLetter>();
-          const remoteKeys = new Set<string>();
-          serverLetters.forEach((l: ReaderLetter) => {
-            remoteKeys.add(l.id);
-            letterMap.set(l.id, l);
-          });
-          current.forEach((l) => {
-            if (!remoteKeys.has(l.id)) {
-              const time = parseSafeTimestamp(l.createdAt);
-              const isFreshLocal = time > 0 && (Date.now() - time) < 10 * 60 * 1000;
-              if (isFreshLocal) letterMap.set(l.id, l);
-            }
-          });
-          const merged = Array.from(letterMap.values()).sort(
-            (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-          );
-          saveStoredReaderLetters(merged);
-          notifyReaderLetterSubscribers(merged);
+    fetch(buildApiUrl('/api/letters/deleted'))
+      .then((res) => (res.ok ? res.json() : []))
+      .then((deletedIds) => {
+        if (Array.isArray(deletedIds)) {
+          deletedIds.forEach((id: string) => recordLetterDeleted(id));
         }
       })
-      .catch(() => {});
+      .catch(() => {})
+      .finally(() => {
+        fetch(buildApiUrl('/api/letters'))
+          .then((res) => (res.ok ? res.json() : null))
+          .then((serverLetters) => {
+            if (Array.isArray(serverLetters)) {
+              const current = getStoredReaderLetters();
+              const letterMap = new Map<string, ReaderLetter>();
+              const remoteKeys = new Set<string>();
+              serverLetters.forEach((l: ReaderLetter) => {
+                if (l && l.id && !isLetterDeleted(l.id) && !(l as any).deleted) {
+                  remoteKeys.add(l.id);
+                  letterMap.set(l.id, l);
+                }
+              });
+              current.forEach((l) => {
+                if (!remoteKeys.has(l.id) && !isLetterDeleted(l.id)) {
+                  const time = parseSafeTimestamp(l.createdAt);
+                  const isFreshLocal = time > 0 && (Date.now() - time) < 10 * 60 * 1000;
+                  if (isFreshLocal) letterMap.set(l.id, l);
+                }
+              });
+              const merged = Array.from(letterMap.values())
+                .filter((l) => !isLetterDeleted(l.id))
+                .sort(
+                  (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+                );
+              saveStoredReaderLetters(merged);
+              notifyReaderLetterSubscribers(merged);
+            }
+          })
+          .catch(() => {});
+      });
   }
 
   // 4. Connect to Firestore realtime stream if not quota exhausted
@@ -2192,6 +2284,7 @@ export const subscribeToReaderLetters = (
             const remoteList: ReaderLetter[] = [];
             snapshot.forEach((d) => {
               const item = d.data();
+              if (item.deleted || isLetterDeleted(d.id)) return;
               remoteList.push({
                 id: d.id,
                 sender: item.sender || 'Bạn đọc giấu tên',
@@ -2215,10 +2308,14 @@ export const subscribeToReaderLetters = (
             const currentLocal = getStoredReaderLetters();
             const mergedMap = new Map<string, ReaderLetter>();
             // Remote first
-            remoteList.forEach((item) => mergedMap.set(item.id, item));
+            remoteList.forEach((item) => {
+              if (!isLetterDeleted(item.id)) {
+                mergedMap.set(item.id, item);
+              }
+            });
             // Keep any local item not in remote only if freshly created (< 10 mins)
             currentLocal.forEach((item) => {
-              if (!mergedMap.has(item.id)) {
+              if (!mergedMap.has(item.id) && !isLetterDeleted(item.id)) {
                 const time = parseSafeTimestamp(item.createdAt);
                 const isFreshLocal = time > 0 && (Date.now() - time) < 10 * 60 * 1000;
                 if (isFreshLocal) {
@@ -2227,9 +2324,11 @@ export const subscribeToReaderLetters = (
               }
             });
 
-            const finalList = Array.from(mergedMap.values()).sort(
-              (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-            );
+            const finalList = Array.from(mergedMap.values())
+              .filter((item) => !isLetterDeleted(item.id))
+              .sort(
+                (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+              );
 
             saveStoredReaderLetters(finalList);
             notifyReaderLetterSubscribers(finalList);
@@ -2390,12 +2489,18 @@ export const replyToReaderLetter = async (
  * Delete a reader letter (Author / Moderator only)
  */
 export const deleteReaderLetter = async (letterId: string): Promise<void> => {
+  if (!letterId) return;
+
+  // 1. Permanently record tombstone
+  recordLetterDeleted(letterId);
+
+  // 2. Immediate local cache removal & notify subscribers
   const currentLetters = getStoredReaderLetters();
-  const updated = currentLetters.filter((l) => l.id !== letterId);
+  const updated = currentLetters.filter((l) => l.id !== letterId && !isLetterDeleted(l.id));
   saveStoredReaderLetters(updated);
   notifyReaderLetterSubscribers(updated);
 
-  // Server API sync for cross-device broadcast
+  // 3. Server API sync for cross-device broadcast
   if (hasBackendServer()) {
     fetch(buildApiUrl(`/api/letters/${encodeURIComponent(letterId)}`), {
       method: 'DELETE',
@@ -2404,11 +2509,18 @@ export const deleteReaderLetter = async (letterId: string): Promise<void> => {
     });
   }
 
+  // 4. Firestore sync: delete doc & set soft-delete tombstone
   if (!isFirestoreQuotaExhausted()) {
     try {
-      await deleteDoc(doc(db, 'reader_letters', letterId)).catch((err) => {
+      const letterRef = doc(db, 'reader_letters', letterId);
+      await deleteDoc(letterRef).catch((err) => {
         checkAndHandleQuotaError(err);
       });
+      await setDoc(
+        letterRef,
+        { deleted: true, deletedAt: new Date().toISOString() },
+        { merge: true }
+      ).catch(() => {});
     } catch (err) {
       checkAndHandleQuotaError(err);
     }

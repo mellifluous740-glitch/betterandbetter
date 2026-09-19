@@ -1,6 +1,7 @@
 import {
   subscribeToAllComments,
   subscribeToReaderLetters,
+  isLetterDeleted,
   RealtimeComment,
   ReaderLetter,
   getStoredStories,
@@ -153,6 +154,7 @@ const buildNotificationsList = (context: NotificationUserContext): { items: Auth
     // 2. Reader Letters (tâm thư riêng tư & công khai gửi cho tác giả)
     currentLetters.forEach((l) => {
       if (l.id && l.id.startsWith('sample-')) return;
+      if (isLetterDeleted(l.id)) return;
 
       const isRead = readIds.has(l.id);
       const typeLabel = l.type === 'private' ? 'thư kín (riêng tư)' : 'tâm tình công khai';
