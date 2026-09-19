@@ -5,6 +5,7 @@ import {
   ReaderLetter,
   getStoredStories,
 } from './realtimeService';
+import { isStoryDeleted } from '../data/mockData';
 
 export interface AuthorNotificationItem {
   id: string;
@@ -78,9 +79,12 @@ const buildNotificationsList = (): { items: AuthorNotificationItem[]; unreadCoun
 
   const items: AuthorNotificationItem[] = [];
 
-  // 1. Process Comments (excluding author's own comments)
+  // 1. Process Comments (excluding author's own comments, and comments from deleted/non-existent stories)
   currentComments.forEach((c) => {
     if (c.isAuthor) return; // Don't notify author about their own comment
+    if (isStoryDeleted(c.storyId)) return; // Ignore comments from deleted stories
+    if (!storyMap.has(c.storyId)) return; // Ignore orphaned comments for non-existent stories
+
     const storyTitle = storyMap.get(c.storyId) || c.storyId;
     const chLabel = c.chapterNumber ? `Chương ${c.chapterNumber}` : 'Truyện';
     const isRead = readIds.has(c.id);
@@ -105,6 +109,9 @@ const buildNotificationsList = (): { items: AuthorNotificationItem[]; unreadCoun
 
   // 2. Process Reader Letters (public & private)
   currentLetters.forEach((l) => {
+    // Exclude pre-seeded sample letters from notifications
+    if (l.id && l.id.startsWith('sample-')) return;
+
     const isRead = readIds.has(l.id);
     const typeLabel = l.type === 'private' ? 'thư kín (riêng tư)' : 'tâm tình công khai';
 

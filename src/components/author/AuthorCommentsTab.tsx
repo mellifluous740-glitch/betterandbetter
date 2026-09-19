@@ -15,6 +15,7 @@ import {
   RefreshCw,
 } from 'lucide-react';
 import { Story } from '../../types';
+import { isStoryDeleted } from '../../data/mockData';
 import {
   RealtimeComment,
   subscribeToAllComments,
@@ -61,6 +62,9 @@ export const AuthorCommentsTab: React.FC<AuthorCommentsTabProps> = ({
   // Filtered comments
   const filteredComments = useMemo(() => {
     return comments.filter((c) => {
+      // 0. Exclude comments from deleted stories
+      if (isStoryDeleted(c.storyId)) return false;
+
       // 1. Story Filter
       if (selectedStoryId !== 'all' && c.storyId !== selectedStoryId) {
         return false;

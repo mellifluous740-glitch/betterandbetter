@@ -474,27 +474,40 @@ export function getAllStoredComments(): RealtimeComment[] {
   const map = new Map<string, RealtimeComment>();
   if (typeof window !== 'undefined') {
     try {
+      const keysToRemove: string[] = [];
       for (let i = 0; i < localStorage.length; i++) {
         const key = localStorage.key(i);
         if (key && key.startsWith('mel_comments_')) {
+          const sId = key.replace('mel_comments_', '');
+          if (isStoryDeleted(sId)) {
+            keysToRemove.push(key);
+            continue;
+          }
           try {
             const raw = localStorage.getItem(key);
             if (raw) {
               const list = JSON.parse(raw);
               if (Array.isArray(list)) {
                 list.forEach((c) => {
-                  if (c && c.id) map.set(c.id, c);
+                  if (c && c.id && !isStoryDeleted(c.storyId)) {
+                    map.set(c.id, c);
+                  }
                 });
               }
             }
           } catch {}
         }
       }
+      keysToRemove.forEach((k) => {
+        try { localStorage.removeItem(k); } catch {}
+      });
     } catch {}
   }
-  return Array.from(map.values()).sort(
-    (a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime()
-  );
+  return Array.from(map.values())
+    .filter((c) => !isStoryDeleted(c.storyId))
+    .sort(
+      (a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime()
+    );
 }
 
 const activeAllCommentSubscribers = new Set<(comments: RealtimeComment[]) => void>();
@@ -3065,11 +3078,14 @@ export const deleteStory = async (storyId: string): Promise<void> => {
     localStorage.setItem('mel_published_stories', JSON.stringify(updatedList));
     localStorage.removeItem(`mel_chapters_${storyId}`);
     if (aliasId) localStorage.removeItem(`mel_chapters_${aliasId}`);
+    localStorage.removeItem(`mel_comments_${storyId}`);
+    if (aliasId) localStorage.removeItem(`mel_comments_${aliasId}`);
     setLiveStoryChapters(storyId, []);
     if (aliasId) setLiveStoryChapters(aliasId, []);
     notifyStorySubscribers(updatedList);
     notifyChapterSubscribers(storyId, []);
     if (aliasId) notifyChapterSubscribers(aliasId, []);
+    notifyAllCommentsSubscribers();
   } catch (localErr) {
     console.warn('Local delete warning:', localErr);
   }
