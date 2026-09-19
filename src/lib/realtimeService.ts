@@ -274,6 +274,8 @@ export const notifyGlobalStatsSubscribers = (partial: Partial<GlobalRealtimeStat
   });
 };
 
+export const getGlobalStats = (): GlobalRealtimeStats => ({ ...cachedGlobalStats });
+
 const notifyStorySubscribers = (stories: Story[]) => {
   const clean = stories.filter((s) => !isStoryDeleted(s.id));
   activeStorySubscribers.forEach((cb) => {
@@ -468,6 +470,46 @@ export function getStoredComments(storyId: string): RealtimeComment[] {
   return [];
 }
 
+export function getAllStoredComments(): RealtimeComment[] {
+  const map = new Map<string, RealtimeComment>();
+  if (typeof window !== 'undefined') {
+    try {
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && key.startsWith('mel_comments_')) {
+          try {
+            const raw = localStorage.getItem(key);
+            if (raw) {
+              const list = JSON.parse(raw);
+              if (Array.isArray(list)) {
+                list.forEach((c) => {
+                  if (c && c.id) map.set(c.id, c);
+                });
+              }
+            }
+          } catch {}
+        }
+      }
+    } catch {}
+  }
+  return Array.from(map.values()).sort(
+    (a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime()
+  );
+}
+
+const activeAllCommentSubscribers = new Set<(comments: RealtimeComment[]) => void>();
+
+export function notifyAllCommentsSubscribers(allComments?: RealtimeComment[]) {
+  const comments = allComments || getAllStoredComments();
+  activeAllCommentSubscribers.forEach((cb) => {
+    try {
+      cb(comments);
+    } catch (e) {
+      console.error(e);
+    }
+  });
+}
+
 export function saveStoredComments(storyId: string, comments: RealtimeComment[]) {
   try {
     localStorage.setItem(`mel_comments_${storyId}`, JSON.stringify(comments));
@@ -477,22 +519,24 @@ export function saveStoredComments(storyId: string, comments: RealtimeComment[])
 export function notifyCommentSubscribers(storyId: string, comments?: RealtimeComment[]) {
   const allComments = comments || getStoredComments(storyId);
   const subs = activeCommentSubscribers.get(storyId);
-  if (!subs) return;
-  subs.forEach(({ chapterNumber, callback }) => {
-    try {
-      const targetNum = chapterNumber !== null && chapterNumber !== undefined ? Number(chapterNumber) : null;
-      if (targetNum !== null && !isNaN(targetNum)) {
-        callback(allComments.filter((c) => {
-          if (c.chapterNumber === undefined || c.chapterNumber === null) return true;
-          return Number(c.chapterNumber) === targetNum;
-        }));
-      } else {
-        callback(allComments);
+  if (subs) {
+    subs.forEach(({ chapterNumber, callback }) => {
+      try {
+        const targetNum = chapterNumber !== null && chapterNumber !== undefined ? Number(chapterNumber) : null;
+        if (targetNum !== null && !isNaN(targetNum)) {
+          callback(allComments.filter((c) => {
+            if (c.chapterNumber === undefined || c.chapterNumber === null) return true;
+            return Number(c.chapterNumber) === targetNum;
+          }));
+        } else {
+          callback(allComments);
+        }
+      } catch (e) {
+        console.error(e);
       }
-    } catch (e) {
-      console.error(e);
-    }
-  });
+    });
+  }
+  notifyAllCommentsSubscribers();
 }
 
 // Background Server Sync & SSE Listener for 100% Cross-Device Realtime Consistency
@@ -1507,6 +1551,140 @@ export const subscribeToComments = (
       set.delete(subObj);
       if (set.size === 0) activeCommentSubscribers.delete(storyId);
     }
+    if (unsubFirestore) {
+      try { unsubFirestore(); } catch {}
+    }
+  };
+};
+
+/**
+ * Subscribe to all comments across all stories & chapters (for Author Notification Bell & Comments Manager)
+ */
+export const subscribeToAllComments = (
+  callback: (comments: RealtimeComment[]) => void
+): (() => void) => {
+  // 1. Immediately emit current local comments
+  callback(getAllStoredComments());
+  activeAllCommentSubscribers.add(callback);
+
+  // 2. Fetch all from backend server if available
+  if (typeof window !== 'undefined' && hasBackendServer()) {
+    fetch(buildApiUrl('/api/comments'))
+      .then((res) => (res.ok ? res.json() : null))
+      .then((serverComments: RealtimeComment[]) => {
+        if (Array.isArray(serverComments) && serverComments.length > 0) {
+          const byStory = new Map<string, RealtimeComment[]>();
+          serverComments.forEach((c) => {
+            if (!byStory.has(c.storyId)) byStory.set(c.storyId, []);
+            byStory.get(c.storyId)!.push(c);
+          });
+          byStory.forEach((list, sId) => {
+            const cur = getStoredComments(sId);
+            const map = new Map<string, RealtimeComment>();
+            list.forEach((c) => map.set(c.id, c));
+            cur.forEach((c) => {
+              if (!map.has(c.id)) {
+                const time = parseSafeTimestamp(c.createdAt);
+                if (time > 0 && Date.now() - time < 10 * 60 * 1000) {
+                  map.set(c.id, c);
+                }
+              }
+            });
+            saveStoredComments(sId, Array.from(map.values()));
+          });
+          const updated = getAllStoredComments();
+          callback(updated);
+          notifyAllCommentsSubscribers(updated);
+        }
+      })
+      .catch(() => {});
+  }
+
+  // 3. Subscribe to Firestore realtime stream for latest comments
+  let unsubFirestore: (() => void) | null = null;
+  if (!isFirestoreQuotaExhausted()) {
+    try {
+      const coll = collection(db, 'comments');
+      const q = query(coll, orderBy('createdAt', 'desc'), limit(150));
+      unsubFirestore = onSnapshot(
+        q,
+        (snapshot) => {
+          const byStory = new Map<string, RealtimeComment[]>();
+          snapshot.forEach((d) => {
+            const item = d.data();
+            const rawReplies = Array.isArray(item.replies) ? item.replies : [];
+            const dedupedReplies: CommentReply[] = [];
+            const seenReplyIds = new Set<string>();
+            for (const r of rawReplies) {
+              const replyId = r?.id || `rep_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+              if (!seenReplyIds.has(replyId)) {
+                seenReplyIds.add(replyId);
+                dedupedReplies.push({
+                  ...r,
+                  id: replyId,
+                  isAuthor: Boolean(r.isAuthor),
+                  isCollaborator: Boolean(r.isCollaborator),
+                  roleBadge: r.roleBadge || (r.isAuthor ? 'Tác giả' : r.isCollaborator ? 'Cộng sự' : undefined),
+                  likes: typeof r.likes === 'number' ? r.likes : 0,
+                  likedBy: Array.isArray(r.likedBy) ? r.likedBy : [],
+                  replyToUser: r.replyToUser || undefined,
+                  replyToId: r.replyToId || undefined,
+                });
+              }
+            }
+
+            const cObj: RealtimeComment = {
+              id: item.id || d.id,
+              storyId: item.storyId,
+              chapterId: item.chapterId,
+              chapterNumber: item.chapterNumber,
+              user: item.user || 'Bạn đọc yêu truyện',
+              userEmail: item.userEmail,
+              userId: item.userId,
+              isAuthor: Boolean(item.isAuthor),
+              isCollaborator: Boolean(item.isCollaborator),
+              roleBadge: item.roleBadge,
+              avatar: item.avatar || '🌸',
+              text: item.text || '',
+              createdAt: item.createdAt || new Date().toISOString(),
+              rating: item.rating,
+              likes: typeof item.likes === 'number' ? item.likes : 0,
+              likedBy: Array.isArray(item.likedBy) ? item.likedBy : [],
+              replies: dedupedReplies,
+            };
+
+            if (!byStory.has(cObj.storyId)) byStory.set(cObj.storyId, []);
+            byStory.get(cObj.storyId)!.push(cObj);
+          });
+
+          byStory.forEach((list, sId) => {
+            const cur = getStoredComments(sId);
+            const map = new Map<string, RealtimeComment>();
+            list.forEach((c) => map.set(c.id, c));
+            cur.forEach((c) => {
+              if (!map.has(c.id)) {
+                const time = parseSafeTimestamp(c.createdAt);
+                if (time > 0 && Date.now() - time < 10 * 60 * 1000) {
+                  map.set(c.id, c);
+                }
+              }
+            });
+            saveStoredComments(sId, Array.from(map.values()));
+          });
+
+          const updated = getAllStoredComments();
+          callback(updated);
+          notifyAllCommentsSubscribers(updated);
+        },
+        (err) => {
+          checkAndHandleQuotaError(err);
+        }
+      );
+    } catch {}
+  }
+
+  return () => {
+    activeAllCommentSubscribers.delete(callback);
     if (unsubFirestore) {
       try { unsubFirestore(); } catch {}
     }

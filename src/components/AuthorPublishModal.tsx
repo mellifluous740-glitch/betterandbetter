@@ -16,6 +16,7 @@ import {
   Layers,
   Check,
   Mail,
+  MessageSquare,
   Send,
   Reply,
   ShieldCheck,
@@ -54,6 +55,7 @@ import { AuthorAnnouncementsTab } from './author/AuthorAnnouncementsTab';
 import { AuthorGenresTab } from './author/AuthorGenresTab';
 import { AuthorCollaboratorsTab } from './author/AuthorCollaboratorsTab';
 import { AuthorSyncTab } from './author/AuthorSyncTab';
+import { AuthorCommentsTab } from './author/AuthorCommentsTab';
 import { getCustomGenres, subscribeToCustomGenres, getStoryGenres, addCustomGenre } from '../utils/genreManager';
 
 interface AuthorPublishModalProps {
@@ -62,6 +64,8 @@ interface AuthorPublishModalProps {
   stories: Story[];
   announcements: Announcement[];
   onStoriesUpdated?: () => void;
+  initialTab?: string;
+  onOpenStoryChapter?: (storyId: string, chapterNumber?: number) => void;
 }
 
 const PRESET_COVERS = [
@@ -93,6 +97,8 @@ export const AuthorPublishModal: React.FC<AuthorPublishModalProps> = ({
   stories,
   announcements,
   onStoriesUpdated,
+  initialTab,
+  onOpenStoryChapter,
 }) => {
   const { user, isAuthor, openAuthModal, logout } = useAuth();
   
@@ -105,11 +111,20 @@ export const AuthorPublishModal: React.FC<AuthorPublishModalProps> = ({
     | 'announcements'
     | 'music'
     | 'letters'
+    | 'comments'
     | 'collaborators'
     | 'manage'
     | 'sync';
 
-  const [activeTab, setActiveTab] = useState<TabType>('newStory');
+  const [activeTab, setActiveTab] = useState<TabType>(
+    (initialTab as TabType) || 'newStory'
+  );
+
+  useEffect(() => {
+    if (initialTab && isOpen) {
+      setActiveTab(initialTab as TabType);
+    }
+  }, [initialTab, isOpen]);
   const [isProcessing, setIsProcessing] = useState(false);
   const [feedbackMessage, setFeedbackMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
@@ -667,6 +682,19 @@ export const AuthorPublishModal: React.FC<AuthorPublishModalProps> = ({
             >
               <Mail className="w-3.5 h-3.5" />
               <span>Hòm thư ({letters.length})</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setActiveTab('comments')}
+              className={`shrink-0 py-2 px-3 rounded-xl text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer whitespace-nowrap ${
+                activeTab === 'comments'
+                  ? 'bg-pink-500 text-white shadow-xs'
+                  : 'text-stone-700 dark:text-stone-200 hover:bg-pink-100/60 dark:hover:bg-stone-800 hover:text-pink-700 dark:hover:text-pink-300'
+              }`}
+            >
+              <MessageSquare className="w-3.5 h-3.5" />
+              <span>Bình luận</span>
             </button>
 
             <button
@@ -1621,6 +1649,20 @@ export const AuthorPublishModal: React.FC<AuthorPublishModalProps> = ({
           {/* TAB 11: LƯU TRỮ & ĐỒNG BỘ GITHUB PAGES */}
           {activeTab === 'sync' && (
             <AuthorSyncTab onFeedback={showFeedback} onRefreshAllData={onStoriesUpdated} />
+          )}
+
+          {/* TAB 12: QUẢN LÝ BÌNH LUẬN ĐỘC GIẢ TOÀN TRANG */}
+          {activeTab === 'comments' && (
+            <AuthorCommentsTab
+              stories={stories}
+              onFeedback={showFeedback}
+              onOpenStoryChapter={(storyId, chapterNumber) => {
+                onClose();
+                if (onOpenStoryChapter) {
+                  onOpenStoryChapter(storyId, chapterNumber);
+                }
+              }}
+            />
           )}
         </div>
       </div>

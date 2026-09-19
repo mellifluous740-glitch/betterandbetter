@@ -28,6 +28,7 @@ import {
   testGithubWrite,
   commitGithubDataFile,
   fetchRawGithubJson,
+  backupInteractiveDataToGithub,
   GithubConfig,
 } from '../../lib/githubSyncService';
 import {
@@ -63,6 +64,8 @@ export const AuthorSyncTab: React.FC<AuthorSyncTabProps> = ({ onFeedback, onRefr
   const [githubRepoInput, setGithubRepoInput] = useState<string>(() => getGithubConfig().repo);
   const [githubBranchInput, setGithubBranchInput] = useState<string>(() => getGithubConfig().branch);
   const [isAutoSyncEnabled, setIsAutoSyncEnabled] = useState<boolean>(() => getGithubConfig().autoSync);
+  const [isAutoBatchSyncEnabled, setIsAutoBatchSyncEnabled] = useState<boolean>(() => getGithubConfig().autoBatchSync !== false);
+  const [isBackingUpInteractive, setIsBackingUpInteractive] = useState(false);
   const [showToken, setShowToken] = useState(false);
   const [isTestingGithub, setIsTestingGithub] = useState(false);
   const [isTestingWrite, setIsTestingWrite] = useState(false);
@@ -171,9 +174,32 @@ export const AuthorSyncTab: React.FC<AuthorSyncTabProps> = ({ onFeedback, onRefr
       branch: githubBranchInput.trim(),
       token: githubTokenInput.trim(),
       autoSync: isAutoSyncEnabled,
+      autoBatchSync: isAutoBatchSyncEnabled,
     });
     setGhConfig(updated);
     onFeedback('success', 'Đã lưu cấu hình GitHub vào bộ nhớ an toàn!');
+  };
+
+  // Manual trigger for batch backup of interactive data (Comments, Letters, Stats)
+  const handleBackupInteractive = async () => {
+    handleSaveGithubConfig();
+    setIsBackingUpInteractive(true);
+    try {
+      const res = await backupInteractiveDataToGithub();
+      if (res.success) {
+        setGhConfig(getGithubConfig());
+        onFeedback(
+          'success',
+          `Đã gom đợt và sao lưu an toàn ${res.commentsCount} bình luận và ${res.lettersCount} thư tâm tình lên GitHub!`
+        );
+      } else {
+        onFeedback('error', res.error || 'Lỗi khi sao lưu dữ liệu tương tác lên GitHub');
+      }
+    } catch (err: any) {
+      onFeedback('error', 'Có lỗi xảy ra: ' + (err?.message || err));
+    } finally {
+      setIsBackingUpInteractive(false);
+    }
   };
 
   // Test GitHub Connection handler
@@ -588,6 +614,20 @@ export const AuthorSyncTab: React.FC<AuthorSyncTabProps> = ({ onFeedback, onRefr
           </label>
         </div>
 
+        {/* Auto Batch Sync Toggle */}
+        <div className="flex items-center gap-3 pt-1">
+          <input
+            type="checkbox"
+            id="autoBatchSyncToggle"
+            checked={isAutoBatchSyncEnabled}
+            onChange={(e) => setIsAutoBatchSyncEnabled(e.target.checked)}
+            className="w-4 h-4 rounded text-pink-600 focus:ring-pink-500 border-stone-300 dark:border-stone-600 cursor-pointer"
+          />
+          <label htmlFor="autoBatchSyncToggle" className="text-xs text-stone-700 dark:text-stone-300 font-medium cursor-pointer">
+            Tự động gom đợt định kì mỗi 15-20 phút (sao lưu bình luận, tâm thư & thống kê lên GitHub)
+          </label>
+        </div>
+
         {/* Buttons */}
         <div className="flex flex-wrap items-center gap-3 pt-3 border-t border-stone-200/80 dark:border-stone-700/80">
           <button
@@ -661,6 +701,54 @@ export const AuthorSyncTab: React.FC<AuthorSyncTabProps> = ({ onFeedback, onRefr
               )}
             </span>
           )}
+        </div>
+      </div>
+
+      {/* BATCH INTERACTION SYNC (GOM ĐỢT ĐỊNH KÌ LÊN GITHUB) */}
+      <div className="p-5 rounded-2xl bg-white dark:bg-stone-850 border border-pink-200 dark:border-stone-700 space-y-4 shadow-2xs">
+        <div className="flex items-start sm:items-center justify-between gap-3 flex-col sm:flex-row">
+          <div className="flex items-center gap-2.5">
+            <div className="p-2 rounded-xl bg-pink-100 dark:bg-stone-700 text-pink-700 dark:text-pink-300">
+              <RefreshCw className="w-4 h-4" />
+            </div>
+            <div>
+              <h4 className="font-serif text-sm font-bold text-stone-850 dark:text-stone-100 flex items-center gap-2">
+                <span>Cơ chế Gom đợt & Sao lưu Tương tác Độc giả</span>
+                <span className="px-2 py-0.5 rounded-full bg-pink-100 dark:bg-pink-900/60 text-pink-700 dark:text-pink-300 text-[10px] font-semibold">
+                  100% Tự động & Không cần độc giả đăng nhập
+                </span>
+              </h4>
+              <p className="text-xs text-stone-500 dark:text-stone-400 mt-0.5">
+                Bình luận, lượt xem và thư của bạn đọc được lưu trữ tức thì và gom đợt đẩy lên GitHub Repository.
+              </p>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={handleBackupInteractive}
+            disabled={isBackingUpInteractive || !githubTokenInput.trim()}
+            className="px-4 py-2 rounded-xl bg-gradient-to-r from-pink-500 to-rose-500 hover:from-pink-600 hover:to-rose-600 text-white text-xs font-bold cursor-pointer disabled:opacity-50 transition-all flex items-center gap-1.5 shadow-2xs shrink-0 self-stretch sm:self-auto justify-center"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${isBackingUpInteractive ? 'animate-spin' : ''}`} />
+            <span>{isBackingUpInteractive ? 'Đang gom đợt sao lưu...' : 'Gom đợt & Sao lưu lên GitHub ngay'}</span>
+          </button>
+        </div>
+
+        <div className="p-3.5 rounded-xl bg-stone-50 dark:bg-stone-800/80 border border-stone-200/80 dark:border-stone-700/80 text-xs text-stone-600 dark:text-stone-300 space-y-1.5">
+          <div className="flex items-center justify-between flex-wrap gap-2 text-[11px]">
+            <span className="font-medium text-stone-700 dark:text-stone-200">
+              Tệp lưu trữ trên GitHub: <code className="text-pink-600 dark:text-pink-400 font-mono">data/comments.json</code> & <code className="text-pink-600 dark:text-pink-400 font-mono">data/letters.json</code>
+            </span>
+            <span className="text-stone-400 dark:text-stone-500">
+              Lần gom đợt gần nhất: {ghConfig.lastInteractiveSyncTime ? new Date(ghConfig.lastInteractiveSyncTime).toLocaleString('vi-VN') : 'Chưa có'}
+            </span>
+          </div>
+          <p className="text-[11px] text-stone-500 dark:text-stone-400 leading-relaxed">
+            • <strong>Trải nghiệm bạn đọc:</strong> Độc giả khắp nơi khi đọc truyện, đăng bình luận hay gửi thư không cần tạo tài khoản hay đăng nhập. Bình luận hiển thị ngay lập tức (0ms).<br />
+            • <strong>Thông báo Quản trị viên:</strong> Bạn và các cộng sự ngay khi mở trang web sẽ thấy ngay thông báo ở biểu tượng Chuông báo trên thanh điều hướng.<br />
+            • <strong>Cơ chế Gom đợt:</strong> Định kì mỗi 15-20 phút (hoặc khi bạn bấm nút trên), hệ thống tự động gom toàn bộ bình luận & thư mới nhất đẩy lên GitHub để lưu trữ vĩnh viễn và đồng bộ cho tất cả các máy khác khi tải lại trang!
+          </p>
         </div>
       </div>
 

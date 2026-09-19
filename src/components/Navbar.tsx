@@ -21,10 +21,12 @@ import {
   PenTool,
   Edit3,
   Settings,
+  MessageSquare,
 } from 'lucide-react';
 import { ActiveTab } from '../types';
 import { bgmEngine, AudioTrack, TRACK_LIST } from '../utils/audioPlayer';
 import { useAuth } from '../lib/authContext';
+import { NotificationBell } from './NotificationBell';
 
 interface NavbarProps {
   currentTab: ActiveTab;
@@ -34,7 +36,8 @@ interface NavbarProps {
   onOpenSearch: () => void;
   isPetalsEnabled: boolean;
   onTogglePetals: () => void;
-  onOpenAuthorModal?: () => void;
+  onOpenAuthorModal?: (tab?: string) => void;
+  onNavigateToStory?: (storyId: string, chapterNumber?: number) => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -46,8 +49,9 @@ export const Navbar: React.FC<NavbarProps> = ({
   isPetalsEnabled,
   onTogglePetals,
   onOpenAuthorModal,
+  onNavigateToStory,
 }) => {
-  const { user, isAuthor, openAuthModal, openProfileModal, logout } = useAuth();
+  const { user, isAuthor, isCollaborator, openAuthModal, openProfileModal, logout } = useAuth();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isMusicPlaying, setIsMusicPlaying] = useState(false);
   const [currentTrack, setCurrentTrack] = useState<AudioTrack>(TRACK_LIST[0]);
@@ -241,6 +245,14 @@ export const Navbar: React.FC<NavbarProps> = ({
         {/* 3. ACTION CONTROLS (INTEGRATED AUTHOR & ACCOUNT MENU, UTILITIES)     */}
         {/* =================================================================== */}
         <div id="navbar-action-controls" className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+          {/* Realtime Notification Bell for Author & Collaborators */}
+          {(isAuthor || isCollaborator || user) && (
+            <NotificationBell
+              onOpenAuthorModal={onOpenAuthorModal}
+              onNavigateToStory={onNavigateToStory}
+            />
+          )}
+
           {/* Integrated Author Studio & Account Dropdown Menu (Hidden on mobile phones, accessible via hamburger drawer) */}
           <div className="relative hidden md:block" ref={authorMenuRef}>
             <button
@@ -349,6 +361,34 @@ export const Navbar: React.FC<NavbarProps> = ({
                       </div>
                       <div className="text-[10px] text-stone-500 dark:text-stone-400 truncate">
                         Đăng truyện, sửa chương, quản lý nhạc & thẻ
+                      </div>
+                    </div>
+                  </button>
+                )}
+
+                {/* Reader Comments Quick Access for Author/Collaborator */}
+                {(isAuthor || isCollaborator) && (
+                  <button
+                    type="button"
+                    id="navbar-author-comments-item"
+                    onClick={() => {
+                      setIsAuthorMenuOpen(false);
+                      if (onOpenAuthorModal) onOpenAuthorModal('comments');
+                    }}
+                    className="w-full text-left p-2.5 rounded-xl hover:bg-pink-50 dark:hover:bg-stone-800 text-stone-800 dark:text-stone-100 flex items-center gap-2.5 transition-colors cursor-pointer group"
+                  >
+                    <div className="w-7 h-7 rounded-lg bg-pink-100 dark:bg-pink-950 text-pink-600 dark:text-pink-300 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
+                      <MessageSquare className="w-3.5 h-3.5" />
+                    </div>
+                    <div className="min-w-0">
+                      <div className="text-xs font-semibold flex items-center gap-1.5 text-stone-850 dark:text-stone-100">
+                        <span>Bình luận độc giả</span>
+                        <span className="text-[9px] px-1.5 py-0.2 rounded-full bg-pink-100 dark:bg-pink-900 text-pink-800 dark:text-pink-200 font-sans">
+                          Mới
+                        </span>
+                      </div>
+                      <div className="text-[10px] text-stone-500 dark:text-stone-400 truncate">
+                        Xem & phản hồi bạn đọc toàn trang
                       </div>
                     </div>
                   </button>

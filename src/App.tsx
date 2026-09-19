@@ -11,6 +11,7 @@ import {
   getStoredAnnouncements,
 } from './lib/realtimeService';
 import { AuthorPublishModal } from './components/AuthorPublishModal';
+import { initPeriodicBatchSync } from './lib/githubSyncService';
 import { Navbar } from './components/Navbar';
 import { HeroIntro } from './components/HeroIntro';
 import { LetterNavCards, LetterTab } from './components/LetterNavCards';
@@ -112,9 +113,25 @@ export default function App() {
 
   const [isSearchOpen, setIsSearchOpen] = useState<boolean>(false);
   const [isAuthorModalOpen, setIsAuthorModalOpen] = useState<boolean>(false);
+  const [authorModalInitialTab, setAuthorModalInitialTab] = useState<string | undefined>('newStory');
   const [stories, setStories] = useState<Story[]>(() => sortStoriesByLatest(STORIES));
   const [announcements, setAnnouncements] = useState<Announcement[]>(() => sortAnnouncements(getStoredAnnouncements()));
   const [chaptersVersion, setChaptersVersion] = useState<number>(0);
+
+  const handleOpenAuthorModal = (tab?: string) => {
+    if (tab) {
+      setAuthorModalInitialTab(tab);
+    }
+    setIsAuthorModalOpen(true);
+  };
+
+  // Periodic automatic batch sync to GitHub (every 15-20 minutes, pushes comments, letters and stats in background)
+  useEffect(() => {
+    const cleanup = initPeriodicBatchSync();
+    return () => {
+      cleanup();
+    };
+  }, []);
 
   // Real-time synchronization of published stories, chapters & announcements across all devices
   useEffect(() => {
@@ -274,6 +291,14 @@ export default function App() {
     navigate(`/bai-viet/${storyId}/chuong/${chapterNumber}`);
   };
 
+  const handleNavigateToStory = (storyId: string, chapterNumber?: number) => {
+    if (chapterNumber && chapterNumber > 0) {
+      handleOpenChapter(storyId, chapterNumber);
+    } else {
+      handleOpenStoryModal(storyId);
+    }
+  };
+
   const handleBackFromReader = () => {
     setReadingChapterInfo(null);
     window.scrollTo({ top: 0, behavior: 'instant' });
@@ -369,7 +394,8 @@ export default function App() {
         onOpenSearch={() => setIsSearchOpen(true)}
         isPetalsEnabled={isPetalsEnabled}
         onTogglePetals={togglePetals}
-        onOpenAuthorModal={() => setIsAuthorModalOpen(true)}
+        onOpenAuthorModal={handleOpenAuthorModal}
+        onNavigateToStory={handleNavigateToStory}
       />
 
       {/* Main Content Area with top padding to clear fixed navbar */}
@@ -856,6 +882,8 @@ export default function App() {
         onClose={() => setIsAuthorModalOpen(false)}
         stories={stories}
         announcements={announcements}
+        initialTab={authorModalInitialTab}
+        onOpenStoryChapter={handleNavigateToStory}
       />
 
       {/* Global Authentication Modal (Login / Register / Fast Author & Reader Access) */}
@@ -865,7 +893,7 @@ export default function App() {
       <ProfileEditModal />
 
       {/* Global Background Music Player Widget */}
-      <BackgroundMusicBar onOpenAuthorStudio={() => setIsAuthorModalOpen(true)} />
+      <BackgroundMusicBar onOpenAuthorStudio={() => handleOpenAuthorModal('music')} />
 
       {/* Footer */}
       <Footer onSelectTab={handleNavSelect} />

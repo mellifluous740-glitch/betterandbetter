@@ -11,7 +11,9 @@ export interface GithubConfig {
   branch: string; // e.g. "main"
   token: string; // Personal Access Token (classic or fine-grained with contents:write)
   autoSync: boolean; // Auto commit on author publish
+  autoBatchSync?: boolean; // Auto periodic batch sync for comments, letters, views
   lastSyncTime?: string;
+  lastInteractiveSyncTime?: string;
 }
 
 const STORAGE_CONFIG_KEY = 'mel_github_config_v1';
@@ -91,21 +93,34 @@ export const getGithubConfig = (): GithubConfig => {
           ? rawAutoSync === 'true'
           : true;
 
+      const rawBatchSync = localStorage.getItem('mel_github_autobatchsync');
+      const finalBatchSync =
+        parsed.autoBatchSync !== undefined
+          ? Boolean(parsed.autoBatchSync)
+          : rawBatchSync !== null
+          ? rawBatchSync === 'true'
+          : true;
+
       return {
         repo: finalRepo,
         branch: parsed.branch || DEFAULT_BRANCH,
         token: parsed.token || token,
         autoSync: finalAutoSync,
+        autoBatchSync: finalBatchSync,
         lastSyncTime: parsed.lastSyncTime,
+        lastInteractiveSyncTime: parsed.lastInteractiveSyncTime || localStorage.getItem('mel_last_interactive_sync') || undefined,
       };
     }
   } catch {}
 
+  const rawBatchSync = typeof window !== 'undefined' ? localStorage.getItem('mel_github_autobatchsync') : null;
   return {
     repo: effectiveRepo,
     branch: DEFAULT_BRANCH,
     token,
     autoSync: rawAutoSync !== null ? rawAutoSync === 'true' : true,
+    autoBatchSync: rawBatchSync !== null ? rawBatchSync === 'true' : true,
+    lastInteractiveSyncTime: typeof window !== 'undefined' ? localStorage.getItem('mel_last_interactive_sync') || undefined : undefined,
   };
 };
 
@@ -123,11 +138,17 @@ export const saveGithubConfig = (config: Partial<GithubConfig>): GithubConfig =>
     branch: (config.branch || current.branch || DEFAULT_BRANCH).trim(),
     token: config.token !== undefined ? config.token.trim() : current.token,
     autoSync: config.autoSync !== undefined ? Boolean(config.autoSync) : current.autoSync !== false,
+    autoBatchSync: config.autoBatchSync !== undefined ? Boolean(config.autoBatchSync) : current.autoBatchSync !== false,
+    lastInteractiveSyncTime: config.lastInteractiveSyncTime || current.lastInteractiveSyncTime,
   };
 
   try {
     localStorage.setItem(STORAGE_CONFIG_KEY, JSON.stringify(updated));
     localStorage.setItem('mel_github_autosync', updated.autoSync ? 'true' : 'false');
+    localStorage.setItem('mel_github_autobatchsync', updated.autoBatchSync ? 'true' : 'false');
+    if (updated.lastInteractiveSyncTime) {
+      localStorage.setItem('mel_last_interactive_sync', updated.lastInteractiveSyncTime);
+    }
     if (updated.token) {
       localStorage.setItem('mel_github_token', updated.token);
     } else {
@@ -617,3 +638,123 @@ export async function testGithubConnection(): Promise<{
     };
   }
 }
+
+/**
+ * Backup interactive data (Comments, Reader Letters, Global Stats) to GitHub repository
+ */
+export async function backupInteractiveDataToGithub(customData?: {
+  comments?: any[];
+  letters?: any[];
+  stats?: any;
+}): Promise<{
+  success: boolean;
+  commentsCount: number;
+  lettersCount: number;
+  error?: string;
+}> {
+  const config = getGithubConfig();
+  if (!config.token) {
+    return {
+      success: false,
+      commentsCount: 0,
+      lettersCount: 0,
+      error: 'Vui lòng cung cấp GitHub Personal Access Token để có quyền ghi dữ liệu lên kho lưu trữ.',
+    };
+  }
+
+  try {
+    const { getAllStoredComments, getStoredReaderLetters, getGlobalStats } = await import('./realtimeService');
+    const comments = customData?.comments || getAllStoredComments();
+    const letters = customData?.letters || getStoredReaderLetters();
+    const stats = customData?.stats || getGlobalStats();
+
+    // 1. Commit comments.json
+    const resComments = await commitGithubDataFile(
+      'comments.json',
+      comments,
+      `Gom đợt sao lưu ${comments.length} bình luận độc giả [skip ci]`
+    );
+    if (!resComments.success) {
+      throw new Error(`Lỗi cập nhật comments.json: ${resComments.error}`);
+    }
+
+    // 2. Commit letters.json
+    const resLetters = await commitGithubDataFile(
+      'letters.json',
+      letters,
+      `Gom đợt sao lưu ${letters.length} thư tâm tình độc giả [skip ci]`
+    );
+    if (!resLetters.success) {
+      throw new Error(`Lỗi cập nhật letters.json: ${resLetters.error}`);
+    }
+
+    // 3. Commit stats.json
+    await commitGithubDataFile(
+      'stats.json',
+      stats,
+      `Cập nhật thống kê tương tác (lượt xem & lượt ghé thăm) [skip ci]`
+    );
+
+    const nowIso = new Date().toISOString();
+    saveGithubConfig({ lastInteractiveSyncTime: nowIso });
+    try {
+      localStorage.setItem('mel_last_interactive_sync', nowIso);
+    } catch {}
+
+    return {
+      success: true,
+      commentsCount: comments.length,
+      lettersCount: letters.length,
+    };
+  } catch (err: any) {
+    return {
+      success: false,
+      commentsCount: 0,
+      lettersCount: 0,
+      error: err?.message || 'Có lỗi xảy ra khi sao lưu tương tác lên GitHub',
+    };
+  }
+}
+
+let batchSyncTimer: any = null;
+
+export const initPeriodicBatchSync = () => {
+  if (typeof window === 'undefined') return () => {};
+  if (batchSyncTimer) {
+    return () => {
+      if (batchSyncTimer) {
+        clearInterval(batchSyncTimer);
+        batchSyncTimer = null;
+      }
+    };
+  }
+
+  // Run periodic check every 15 minutes
+  batchSyncTimer = setInterval(async () => {
+    const config = getGithubConfig();
+    if (!config.token || !config.autoBatchSync) return;
+
+    const lastSyncStr = config.lastInteractiveSyncTime || localStorage.getItem('mel_last_interactive_sync');
+    const lastSync = lastSyncStr ? new Date(lastSyncStr).getTime() : 0;
+    const now = Date.now();
+
+    // If more than 20 minutes since last interactive sync
+    if (now - lastSync > 20 * 60 * 1000) {
+      try {
+        const result = await backupInteractiveDataToGithub();
+        if (result.success) {
+          console.log(`[BatchSync] Đã tự động gom đợt sao lưu ${result.commentsCount} bình luận & ${result.lettersCount} thư lên GitHub`);
+        }
+      } catch (err) {
+        console.warn('[BatchSync] Auto batch sync note:', err);
+      }
+    }
+  }, 15 * 60 * 1000);
+
+  return () => {
+    if (batchSyncTimer) {
+      clearInterval(batchSyncTimer);
+      batchSyncTimer = null;
+    }
+  };
+};
