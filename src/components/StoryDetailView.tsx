@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Story, Chapter, RealtimeComment } from '../types';
+import { RichTextRenderer } from './common/RichTextRenderer';
 import {
   ArrowLeft,
   BookOpen,
@@ -600,9 +601,9 @@ export const StoryDetailView: React.FC<StoryDetailViewProps> = ({
                 <Sparkles className="w-4 h-4 text-pink-500" />
                 <span>Văn án câu chuyện:</span>
               </h3>
-              <p className="font-serif text-sm sm:text-base text-stone-700 dark:text-stone-300 leading-relaxed indent-4">
-                {story.summary}
-              </p>
+              <div className="font-serif text-sm sm:text-base text-stone-700 dark:text-stone-300 leading-relaxed">
+                <RichTextRenderer content={story.summary} indentParagraphs={false} />
+              </div>
             </div>
 
             {/* Password Hint Alert if applicable */}

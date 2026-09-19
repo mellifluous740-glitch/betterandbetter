@@ -21,6 +21,7 @@ import {
 import { publishStory, deleteStory } from '../../lib/realtimeService';
 import { getStoryGenres, subscribeToCustomGenres, addCustomGenre } from '../../utils/genreManager';
 import { getStoryChapters } from '../../data/mockData';
+import { RichTextEditor } from '../common/RichTextEditor';
 
 interface AuthorEditStoryTabProps {
   stories: Story[];
@@ -553,22 +554,15 @@ export const AuthorEditStoryTab: React.FC<AuthorEditStoryTabProps> = ({
           </div>
         </div>
 
-        {/* Summary */}
-        <div className="space-y-1.5 pt-1">
-          <div className="flex items-center justify-between">
-            <label className="text-xs font-semibold text-stone-800 dark:text-stone-100">
-              Văn án / Giới thiệu tác phẩm
-            </label>
-            <span className="text-[11px] text-stone-400 font-mono">
-              {summary.trim().split(/\s+/).filter(Boolean).length} từ • {summary.length} ký tự
-            </span>
-          </div>
-          <textarea
-            rows={5}
+        {/* Summary with RichTextEditor */}
+        <div className="pt-1">
+          <RichTextEditor
+            label="Văn án / Giới thiệu tác phẩm"
             value={summary}
-            onChange={(e) => setSummary(e.target.value)}
-            placeholder="Nội dung tóm tắt cốt truyện..."
-            className="w-full p-3.5 rounded-xl border border-stone-300 dark:border-stone-600 bg-white dark:bg-stone-900 text-stone-900 dark:text-stone-100 text-xs sm:text-sm font-serif leading-relaxed focus:ring-2 focus:ring-pink-300 focus:outline-hidden"
+            onChange={setSummary}
+            placeholder="Nội dung tóm tắt cốt truyện. Ô tự động co giãn theo nội dung, hỗ trợ căn dòng và định dạng phong phú..."
+            minHeight={180}
+            fontFamily="serif"
           />
         </div>
 

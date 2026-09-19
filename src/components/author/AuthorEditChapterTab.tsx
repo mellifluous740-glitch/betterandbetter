@@ -10,11 +10,10 @@ import {
   Sparkles,
   ChevronRight,
   ChevronLeft,
-  Eye,
-  Edit3,
 } from 'lucide-react';
 import { getStoryChapters } from '../../data/mockData';
 import { publishChapter, deleteChapter, subscribeToStoryChapters } from '../../lib/realtimeService';
+import { RichTextEditor } from '../common/RichTextEditor';
 
 interface AuthorEditChapterTabProps {
   stories: Story[];
@@ -45,7 +44,6 @@ export const AuthorEditChapterTab: React.FC<AuthorEditChapterTabProps> = ({
   const [chapters, setChapters] = useState<Chapter[]>([]);
   const [selectedChapterId, setSelectedChapterId] = useState<string>('');
   const [chapterSearch, setChapterSearch] = useState('');
-  const [isPreviewMode, setIsPreviewMode] = useState(false);
 
   // Form states
   const [chapterTitle, setChapterTitle] = useState('');
@@ -110,7 +108,6 @@ export const AuthorEditChapterTab: React.FC<AuthorEditChapterTabProps> = ({
         setChapterPasswordHint(ch.passwordHint || '');
         setChapterPasswordKey(ch.passwordKey || '');
         setConfirmDelete(false);
-        setIsPreviewMode(false);
       }
     }
   }, [selectedChapterId, chapters]);
@@ -490,76 +487,18 @@ export const AuthorEditChapterTab: React.FC<AuthorEditChapterTabProps> = ({
             />
           </div>
 
-          {/* Content Area with Toolbar & Preview Toggle */}
-          <div className="space-y-2">
-            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-stone-100 dark:border-stone-800 pb-2">
-              <div className="flex items-center gap-2">
-                <label className="text-xs font-semibold text-stone-800 dark:text-stone-100">
-                  Nội dung chương truyện <span className="text-rose-500">*</span>
-                </label>
-                <span className="text-[11px] text-stone-500 dark:text-stone-400 font-mono bg-stone-100 dark:bg-stone-800 px-2 py-0.5 rounded-md">
-                  {wordCount} từ • ~{estReadMinutes} phút đọc
-                </span>
-              </div>
-
-              <div className="flex items-center gap-1.5">
-                <button
-                  type="button"
-                  onClick={handleFormatContent}
-                  className="px-2.5 py-1 rounded-lg text-xs font-medium bg-stone-100 hover:bg-stone-200 dark:bg-stone-800 dark:hover:bg-stone-700 text-stone-700 dark:text-stone-300 transition-colors flex items-center gap-1 cursor-pointer"
-                  title="Xóa bớt dòng trống thừa và thụt lề chuẩn"
-                >
-                  <Sparkles className="w-3 h-3 text-pink-500" />
-                  <span>Chuẩn hóa dòng</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setIsPreviewMode(!isPreviewMode)}
-                  className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-colors flex items-center gap-1 cursor-pointer ${
-                    isPreviewMode
-                      ? 'bg-pink-500 text-white'
-                      : 'bg-stone-100 hover:bg-stone-200 dark:bg-stone-800 dark:hover:bg-stone-700 text-stone-700 dark:text-stone-300'
-                  }`}
-                >
-                  {isPreviewMode ? <Edit3 className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
-                  <span>{isPreviewMode ? 'Chế độ gõ chữ' : 'Xem trước'}</span>
-                </button>
-              </div>
-            </div>
-
-            {isPreviewMode ? (
-              <div className="w-full min-h-[300px] max-h-[500px] overflow-y-auto p-4 sm:p-6 rounded-xl border border-pink-200 dark:border-stone-700 bg-pink-50/20 dark:bg-stone-900 font-serif text-sm sm:text-base leading-relaxed text-stone-800 dark:text-stone-200 space-y-4 custom-scrollbar">
-                <div className="border-b border-pink-100 dark:border-stone-800 pb-3">
-                  <h3 className="font-bold text-base sm:text-lg text-stone-900 dark:text-stone-100">
-                    {chapterTitle || 'Chưa có tiêu đề'}
-                  </h3>
-                  {translatorNote && (
-                    <p className="text-xs italic text-stone-500 dark:text-stone-400 mt-1">
-                      🌸 Lời nhắn: {translatorNote}
-                    </p>
-                  )}
-                </div>
-                {chapterContent ? (
-                  chapterContent.split('\n\n').map((para, idx) => (
-                    <p key={idx} className="indent-6 leading-relaxed">
-                      {para}
-                    </p>
-                  ))
-                ) : (
-                  <p className="text-stone-400 italic">Chưa có nội dung văn bản.</p>
-                )}
-              </div>
-            ) : (
-              <textarea
-                rows={12}
-                required
-                value={chapterContent}
-                onChange={(e) => setChapterContent(e.target.value)}
-                placeholder="Dán hoặc gõ nội dung chương truyện tại đây..."
-                className="w-full p-4 rounded-xl border border-stone-300 dark:border-stone-600 bg-white dark:bg-stone-900 text-stone-900 dark:text-stone-100 text-sm leading-relaxed focus:ring-2 focus:ring-pink-300 focus:outline-hidden font-serif custom-scrollbar"
-              />
-            )}
+          {/* Content Area with RichTextEditor & Auto-expand */}
+          <div className="space-y-1">
+            <RichTextEditor
+              label="Nội dung chương truyện"
+              required
+              value={chapterContent}
+              onChange={setChapterContent}
+              placeholder="Dán hoặc gõ nội dung chương truyện tại đây. Ô sẽ tự động mở rộng theo nội dung và hỗ trợ đầy đủ thanh công cụ căn lề, in đậm, in nghiêng..."
+              minHeight={360}
+              fontFamily="serif"
+              helperText="💡 Mẹo: Nhấn nút [Mở rộng] ở góc trên để viết trong không gian toàn màn hình tiện lợi hơn."
+            />
           </div>
 
           {/* Action Bar */}

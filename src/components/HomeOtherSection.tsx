@@ -13,6 +13,7 @@ import {
   Volume2,
 } from 'lucide-react';
 import { bgmEngine, AudioTrack, TRACK_LIST } from '../utils/audioPlayer';
+import { RichTextRenderer } from './common/RichTextRenderer';
 
 interface HomeOtherSectionProps {
   onGoToOtherPage: () => void;
@@ -264,9 +265,9 @@ export const HomeOtherSection: React.FC<HomeOtherSectionProps> = ({ onGoToOtherP
                   </button>
                 </div>
 
-                <p className="text-xs text-stone-700 dark:text-stone-300 leading-relaxed font-sans">
-                  "{letter.content}"
-                </p>
+                <div className="text-xs text-stone-700 dark:text-stone-300 leading-relaxed font-sans">
+                  <RichTextRenderer content={letter.content} indentParagraphs={false} />
+                </div>
 
                 {letter.reply && (
                   <div className="p-2.5 rounded-xl bg-pink-50/80 dark:bg-stone-900/80 border border-pink-200/60 dark:border-stone-800 text-[11px] text-stone-600 dark:text-stone-300 space-y-0.5">

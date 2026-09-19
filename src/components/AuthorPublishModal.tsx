@@ -43,6 +43,8 @@ import {
   deleteReaderLetter,
   resetAllMetricsToZero,
 } from '../lib/realtimeService';
+import { RichTextEditor } from './common/RichTextEditor';
+import { RichTextRenderer } from './common/RichTextRenderer';
 import { getGithubConfig, saveGithubConfig, type GithubConfig } from '../lib/githubSyncService';
 import { useAuth } from '../lib/authContext';
 import { AuthorMusicTab } from './author/AuthorMusicTab';
@@ -1023,17 +1025,15 @@ export const AuthorPublishModal: React.FC<AuthorPublishModalProps> = ({
                 </div>
               </div>
 
-              {/* Summary */}
-              <div className="space-y-1 pt-1">
-                <label className="text-xs font-semibold text-stone-800 dark:text-stone-100">
-                  Văn án / Giới thiệu tác phẩm
-                </label>
-                <textarea
-                  rows={5}
+              {/* Summary with RichTextEditor */}
+              <div className="pt-1">
+                <RichTextEditor
+                  label="Văn án / Giới thiệu tác phẩm"
                   value={storySummary}
-                  onChange={(e) => setStorySummary(e.target.value)}
-                  placeholder="Nội dung tóm tắt văn án truyện..."
-                  className="w-full p-3 rounded-xl border border-stone-300 dark:border-stone-600 bg-white dark:bg-stone-900 text-stone-900 dark:text-stone-100 text-xs sm:text-sm font-serif leading-relaxed focus:ring-2 focus:ring-pink-300 focus:outline-hidden"
+                  onChange={setStorySummary}
+                  placeholder="Nội dung tóm tắt văn án truyện. Ô tự động mở rộng theo nội dung và hỗ trợ thanh công cụ định dạng..."
+                  minHeight={170}
+                  fontFamily="serif"
                 />
               </div>
 
@@ -1184,22 +1184,15 @@ export const AuthorPublishModal: React.FC<AuthorPublishModalProps> = ({
                 />
               </div>
 
-              <div className="space-y-1">
-                <div className="flex items-center justify-between">
-                  <label className="text-xs font-semibold text-stone-800 dark:text-stone-100">
-                    Nội dung chương truyện <span className="text-rose-500">*</span>
-                  </label>
-                  <span className="text-[11px] text-stone-500 dark:text-stone-400 font-mono">
-                    {chapterContent.trim() ? chapterContent.trim().split(/\s+/).length : 0} từ
-                  </span>
-                </div>
-                <textarea
-                  rows={9}
+              <div className="pt-1">
+                <RichTextEditor
+                  label="Nội dung chương truyện"
                   required
-                  placeholder="Dán hoặc gõ toàn bộ nội dung chương truyện tại đây..."
+                  placeholder="Dán hoặc gõ toàn bộ nội dung chương truyện tại đây. Ô tự động mở rộng theo nội dung khi xuống dòng, tích hợp thanh công cụ căn dòng và in ấn định dạng..."
                   value={chapterContent}
-                  onChange={(e) => setChapterContent(e.target.value)}
-                  className="w-full p-3.5 rounded-xl border border-stone-300 dark:border-stone-600 bg-white dark:bg-stone-900 text-stone-900 dark:text-stone-100 text-sm leading-relaxed focus:ring-2 focus:ring-pink-300 focus:outline-hidden font-serif"
+                  onChange={setChapterContent}
+                  minHeight={320}
+                  fontFamily="serif"
                 />
               </div>
 
@@ -1395,9 +1388,9 @@ export const AuthorPublishModal: React.FC<AuthorPublishModalProps> = ({
                         )}
                       </div>
 
-                      <p className="text-xs sm:text-sm text-stone-800 dark:text-stone-100 leading-relaxed font-serif whitespace-pre-line bg-stone-50/80 dark:bg-stone-800/80 p-3 rounded-xl border border-stone-200/60 dark:border-stone-700">
-                        "{letter.message}"
-                      </p>
+                      <div className="text-xs sm:text-sm text-stone-800 dark:text-stone-100 leading-relaxed font-serif bg-stone-50/80 dark:bg-stone-800/80 p-3 rounded-xl border border-stone-200/60 dark:border-stone-700">
+                        <RichTextRenderer content={letter.message} indentParagraphs={false} />
+                      </div>
 
                       {/* Reply Section */}
                       {letter.authorReply ? (
@@ -1406,18 +1399,18 @@ export const AuthorPublishModal: React.FC<AuthorPublishModalProps> = ({
                             <Reply className="w-3 h-3" />
                             <span>Mellifluous đã hồi đáp:</span>
                           </span>
-                          <p className="text-xs text-stone-800 dark:text-stone-100 leading-relaxed font-serif">
-                            {letter.authorReply}
-                          </p>
+                          <div className="text-xs text-stone-800 dark:text-stone-100 leading-relaxed font-serif">
+                            <RichTextRenderer content={letter.authorReply} indentParagraphs={false} />
+                          </div>
                         </div>
                       ) : replyingLetterId === letter.id ? (
                         <div className="space-y-2 pt-1">
-                          <textarea
-                            rows={3}
+                          <RichTextEditor
                             placeholder="Nhập lời nhắn gửi của bạn tới độc giả..."
                             value={authorReplyInput}
-                            onChange={(e) => setAuthorReplyInput(e.target.value)}
-                            className="w-full p-2.5 rounded-xl border border-pink-300 dark:border-stone-600 bg-white dark:bg-stone-900 text-stone-900 dark:text-stone-100 text-xs sm:text-sm focus:ring-2 focus:ring-pink-300 focus:outline-hidden"
+                            onChange={setAuthorReplyInput}
+                            minHeight={110}
+                            fontFamily="serif"
                           />
                           <div className="flex justify-end gap-2">
                             <button

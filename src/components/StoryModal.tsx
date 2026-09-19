@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Story, Chapter } from '../types';
 import { getStoryChapters } from '../data/mockData';
+import { RichTextRenderer } from './common/RichTextRenderer';
 import {
   X,
   BookOpen,
@@ -380,9 +381,9 @@ export const StoryModal: React.FC<StoryModalProps> = ({
               <Sparkles className="w-4 h-4 text-pink-500" />
               <span>Văn án câu chuyện:</span>
             </h3>
-            <p className="font-serif text-xs sm:text-sm text-stone-700 dark:text-stone-300 leading-relaxed indent-4">
-              {story.summary}
-            </p>
+            <div className="font-serif text-xs sm:text-sm text-stone-700 dark:text-stone-300 leading-relaxed">
+              <RichTextRenderer content={story.summary} indentParagraphs={false} />
+            </div>
           </div>
 
           {/* Password Notification Banner if has locked chapters */}

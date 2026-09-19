@@ -18,6 +18,7 @@ import { SUMMER_QUOTES, isStoryDeleted } from '../data/mockData';
 import { sortAnnouncements } from '../lib/realtimeService';
 import { SidebarStoryDropdown } from './SidebarStoryDropdown';
 import { SidebarGenreDropdown } from './SidebarGenreDropdown';
+import { RichTextRenderer } from './common/RichTextRenderer';
 
 interface SidebarProps {
   stories: Story[];
@@ -156,9 +157,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 <h4 className="font-serif text-xs sm:text-sm font-bold text-stone-900 dark:text-stone-100 leading-snug">
                   {notice.title}
                 </h4>
-                <p className="mt-1 text-xs text-stone-700 dark:text-stone-300 font-sans leading-relaxed whitespace-pre-line">
-                  {notice.content}
-                </p>
+                <div className="mt-1 text-xs text-stone-700 dark:text-stone-300 font-sans leading-relaxed">
+                  <RichTextRenderer content={notice.content} indentParagraphs={false} />
+                </div>
               </div>
             );
           }))}

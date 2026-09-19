@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Story } from '../types';
 import { Search, X, BookOpen, Key, Sparkles, ArrowRight } from 'lucide-react';
+import { stripRichText } from './common/RichTextRenderer';
 
 interface SearchModalProps {
   isOpen: boolean;
@@ -139,7 +140,7 @@ export const SearchModal: React.FC<SearchModalProps> = ({
                       Tác giả: {story.author} • Edit: {story.translator}
                     </p>
                     <p className="text-xs text-stone-600 dark:text-stone-300 font-serif line-clamp-1">
-                      {story.summary}
+                      {stripRichText(story.summary)}
                     </p>
                   </div>
 

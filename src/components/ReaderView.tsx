@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Story, Chapter, RealtimeComment } from '../types';
 import { isStoryDeleted } from '../data/mockData';
+import { RichTextRenderer } from './common/RichTextRenderer';
 import {
   subscribeToComments,
   postRealtimeComment,
@@ -1034,11 +1035,10 @@ export const ReaderView: React.FC<ReaderViewProps> = ({
             }`}
             style={{ fontSize: `${fontSize}px` }}
           >
-            {chapter.content.split('\n\n').map((paragraph, index) => (
-              <p key={index} className="indent-5 sm:indent-8">
-                {paragraph}
-              </p>
-            ))}
+            <RichTextRenderer
+              content={chapter.content}
+              indentParagraphs={false}
+            />
 
             {/* Ending note of chapter */}
             <div className="pt-8 text-center space-y-1.5">

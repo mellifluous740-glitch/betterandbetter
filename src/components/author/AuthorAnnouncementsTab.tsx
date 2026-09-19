@@ -14,6 +14,8 @@ import {
   ChevronUp,
 } from 'lucide-react';
 import { publishAnnouncement, deleteAnnouncement } from '../../lib/realtimeService';
+import { RichTextEditor } from '../common/RichTextEditor';
+import { RichTextRenderer } from '../common/RichTextRenderer';
 
 interface AuthorAnnouncementsTabProps {
   announcements: Announcement[];
@@ -157,17 +159,15 @@ export const AuthorAnnouncementsTab: React.FC<AuthorAnnouncementsTabProps> = ({
             </div>
           </div>
 
-          <div className="space-y-1">
-            <label className="text-xs font-semibold text-stone-800 dark:text-stone-100">
-              Nội dung thông báo <span className="text-rose-500">*</span>
-            </label>
-            <textarea
-              rows={4}
+          <div className="pt-1">
+            <RichTextEditor
+              label="Nội dung thông báo"
               required
               placeholder="Nhập nội dung thông báo gửi tới độc giả của nhà Mellifluous..."
               value={content}
-              onChange={(e) => setContent(e.target.value)}
-              className="w-full p-3 rounded-xl border border-stone-300 dark:border-stone-600 bg-white dark:bg-stone-900 text-stone-900 dark:text-stone-100 text-xs sm:text-sm leading-relaxed focus:ring-2 focus:ring-pink-300 focus:outline-hidden"
+              onChange={setContent}
+              minHeight={160}
+              fontFamily="sans"
             />
           </div>
 
@@ -300,9 +300,9 @@ export const AuthorAnnouncementsTab: React.FC<AuthorAnnouncementsTabProps> = ({
                           {ann.title}
                         </h5>
 
-                        <p className="text-xs text-stone-700 dark:text-stone-200 leading-relaxed whitespace-pre-line">
-                          {ann.content}
-                        </p>
+                        <div className="text-xs text-stone-700 dark:text-stone-200 leading-relaxed">
+                          <RichTextRenderer content={ann.content} indentParagraphs={false} />
+                        </div>
                       </div>
 
                       <div className="flex items-center gap-1.5 shrink-0 self-end sm:self-start">

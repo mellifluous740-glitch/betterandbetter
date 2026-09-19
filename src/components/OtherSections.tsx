@@ -35,6 +35,8 @@ import {
   ReaderLetter,
 } from '../lib/realtimeService';
 import { useAuth } from '../lib/authContext';
+import { RichTextRenderer } from './common/RichTextRenderer';
+import { RichTextEditor } from './common/RichTextEditor';
 
 export const OtherSections: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'diary' | 'music' | 'faq'>('diary');
@@ -597,16 +599,18 @@ export const OtherSections: React.FC = () => {
                   </span>
                   <span className="text-stone-400 font-mono text-[11px]">{lookedUpLetter.time}</span>
                 </div>
-                <p className="font-serif italic text-xs sm:text-sm text-stone-700 dark:text-stone-300">
-                  "{lookedUpLetter.content}"
-                </p>
+                <div className="font-serif italic text-xs sm:text-sm text-stone-700 dark:text-stone-300">
+                  <RichTextRenderer content={lookedUpLetter.content} indentParagraphs={false} />
+                </div>
                 {lookedUpLetter.replyFromMel ? (
                   <div className="p-3 rounded-lg bg-pink-50 dark:bg-pink-950/50 border border-pink-200 dark:border-pink-900 text-xs space-y-1">
                     <div className="flex items-center gap-1.5 font-bold text-pink-700 dark:text-pink-300">
                       <span>🌸</span>
                       <span>Hồi đáp riêng từ Mel:</span>
                     </div>
-                    <p className="text-stone-700 dark:text-stone-200 pl-4">{lookedUpLetter.replyFromMel}</p>
+                    <div className="text-stone-700 dark:text-stone-200 pl-4">
+                      <RichTextRenderer content={lookedUpLetter.replyFromMel} indentParagraphs={false} />
+                    </div>
                   </div>
                 ) : (
                   <p className="text-xs text-stone-400 italic">
@@ -714,9 +718,9 @@ export const OtherSections: React.FC = () => {
                         </div>
 
                         {/* Content */}
-                        <p className="font-serif text-xs sm:text-sm text-stone-700 dark:text-stone-300 leading-relaxed italic">
-                          "{letter.content}"
-                        </p>
+                        <div className="font-serif text-xs sm:text-sm text-stone-700 dark:text-stone-300 leading-relaxed italic">
+                          <RichTextRenderer content={letter.content} indentParagraphs={false} />
+                        </div>
 
                         {/* Mel / Collaborator Reply if present */}
                         {letter.replyFromMel && (
@@ -725,9 +729,9 @@ export const OtherSections: React.FC = () => {
                               <span>🌸</span>
                               <span>{letter.repliedBy ? `Hồi đáp từ ${letter.repliedBy}:` : 'Lời nhắn từ Tác giả & BQT:'}</span>
                             </div>
-                            <p className="text-stone-600 dark:text-stone-300 font-sans pl-5">
-                              {letter.replyFromMel}
-                            </p>
+                            <div className="text-stone-600 dark:text-stone-300 font-sans pl-5">
+                              <RichTextRenderer content={letter.replyFromMel} indentParagraphs={false} />
+                            </div>
                           </div>
                         )}
 
@@ -737,12 +741,12 @@ export const OtherSections: React.FC = () => {
                             <label className="block text-[11px] font-semibold text-amber-900 dark:text-amber-200">
                               Viết phản hồi của Tác giả:
                             </label>
-                            <textarea
-                              rows={3}
+                            <RichTextEditor
                               value={authorReplyText}
-                              onChange={(e) => setAuthorReplyText(e.target.value)}
+                              onChange={setAuthorReplyText}
                               placeholder="Nhập lời cảm ơn, lời nhắn gửi ấm áp của Mel..."
-                              className="w-full p-2.5 text-xs rounded-lg bg-white dark:bg-stone-800 border border-amber-200 dark:border-stone-700 text-stone-800 dark:text-stone-100 focus:ring-2 focus:ring-amber-400 focus:outline-hidden"
+                              minHeight={100}
+                              fontFamily="sans"
                             />
                             <div className="flex items-center justify-end gap-2">
                               <button

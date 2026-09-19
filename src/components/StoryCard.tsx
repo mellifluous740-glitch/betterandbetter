@@ -4,6 +4,7 @@ import { Story } from '../types';
 import { BookOpen, Eye, Heart, Sparkles, Key, CheckCircle, Clock, Star, Share2 } from 'lucide-react';
 import { getStoryChapters } from '../data/mockData';
 import { subscribeToStoryStats, subscribeToStoryChapters, toggleStoryLike, recordStoryView } from '../lib/realtimeService';
+import { stripRichText } from './common/RichTextRenderer';
 
 interface StoryCardProps {
   story: Story;
@@ -234,7 +235,7 @@ export const StoryCard: React.FC<StoryCardProps> = ({ story, onOpenStory, onSele
 
           {/* Summary */}
           <p className="text-xs sm:text-sm text-stone-600 dark:text-stone-300 font-serif leading-relaxed line-clamp-3">
-            {story.summary}
+            {stripRichText(story.summary)}
           </p>
         </div>
 
