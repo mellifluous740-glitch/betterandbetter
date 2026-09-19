@@ -1,16 +1,7 @@
 {
-  "global": {
-    "totalVisits": 1,
-    "totalFollowers": 0,
-    "totalLikes": 1
-  },
-  "stories": {
-    "1": {
-      "views": 1,
-      "likes": 1,
-      "followers": 0,
-      "ratingSum": 0,
-      "ratingCount": 0
-    }
-  }
+  "totalVisits": 4,
+  "activeReaders": 1,
+  "totalFollowers": 0,
+  "totalComments": 0,
+  "totalLikes": 0
 }
