@@ -4,16 +4,18 @@ import {
   CheckCheck,
   MessageSquare,
   Mail,
-  ExternalLink,
+  BookOpen,
   Sparkles,
   ChevronRight,
+  Compass,
 } from 'lucide-react';
 import {
   AuthorNotificationItem,
-  subscribeToAuthorNotifications,
+  subscribeToUserNotifications,
   markAllNotificationsAsRead,
   markNotificationAsRead,
 } from '../lib/notificationService';
+import { useAuth } from '../lib/authContext';
 
 interface NotificationBellProps {
   onOpenAuthorModal?: (tab?: string) => void;
@@ -24,22 +26,45 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({
   onOpenAuthorModal,
   onNavigateToStory,
 }) => {
+  const { user, isAuthor, isCollaborator } = useAuth();
   const [notifications, setNotifications] = useState<AuthorNotificationItem[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [isOpen, setIsOpen] = useState(false);
-  const [activeFilter, setActiveFilter] = useState<'all' | 'comment' | 'letter'>('all');
+  const [activeFilter, setActiveFilter] = useState<string>('all');
   const popoverRef = useRef<HTMLDivElement>(null);
 
-  // Realtime subscription
-  useEffect(() => {
-    const unsub = subscribeToAuthorNotifications((items, count) => {
-      setNotifications(items);
-      setUnreadCount(count);
-    });
-    return unsub;
-  }, []);
+  const isInternal = isAuthor || isCollaborator;
+  const currentUid = user?.uid || user?.email || undefined;
 
-  // Handle click outside to close
+  // Realtime role-based subscription: strictly requires authenticated user
+  useEffect(() => {
+    if (!user) {
+      setNotifications([]);
+      setUnreadCount(0);
+      return;
+    }
+
+    const unsub = subscribeToUserNotifications(
+      {
+        user: {
+          uid: user.uid,
+          email: user.email,
+          displayName: user.displayName,
+          nickname: (user as any).nickname,
+        },
+        isAuthor,
+        isCollaborator,
+      },
+      (items, count) => {
+        setNotifications(items);
+        setUnreadCount(count);
+      }
+    );
+
+    return unsub;
+  }, [user?.uid, user?.email, user?.displayName, isAuthor, isCollaborator]);
+
+  // Handle click outside to close popover
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (popoverRef.current && !popoverRef.current.contains(event.target as Node)) {
@@ -54,26 +79,66 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({
     };
   }, [isOpen]);
 
+  // If user is not logged in, bell is completely hidden
+  if (!user) {
+    return null;
+  }
+
+  // Filter items based on active tab and role
   const filteredItems = notifications.filter((item) => {
-    if (activeFilter === 'comment') return item.type === 'comment';
-    if (activeFilter === 'letter') return item.type === 'letter';
+    if (activeFilter === 'all') return true;
+
+    if (isInternal) {
+      if (activeFilter === 'comment') return item.type === 'comment';
+      if (activeFilter === 'letter') return item.type === 'letter';
+      if (activeFilter === 'chapter') return item.type === 'chapter' || item.type === 'story';
+    } else {
+      // Normal Reader: Strictly no letters
+      if (activeFilter === 'chapter') return item.type === 'chapter' || item.type === 'story';
+      if (activeFilter === 'reply') return item.type === 'reply' || item.type === 'announcement';
+    }
+
     return true;
   });
 
   const handleItemClick = (item: AuthorNotificationItem) => {
-    markNotificationAsRead(item.id);
+    markNotificationAsRead(item.id, currentUid);
     setIsOpen(false);
 
-    if (item.type === 'comment') {
+    if (item.type === 'chapter' || item.type === 'story' || item.type === 'reply') {
+      if (onNavigateToStory && item.storyId) {
+        onNavigateToStory(item.storyId, item.chapterNumber);
+      }
+    } else if (item.type === 'comment') {
       if (onNavigateToStory && item.storyId) {
         onNavigateToStory(item.storyId, item.chapterNumber);
       } else if (onOpenAuthorModal) {
         onOpenAuthorModal('comments');
       }
     } else if (item.type === 'letter') {
-      if (onOpenAuthorModal) {
+      // Letters only for author/collaborators
+      if (isInternal && onOpenAuthorModal) {
         onOpenAuthorModal('letters');
       }
+    }
+  };
+
+  const getBadgeEmoji = (type: string) => {
+    switch (type) {
+      case 'letter':
+        return '💌';
+      case 'comment':
+        return '💬';
+      case 'reply':
+        return '💬';
+      case 'chapter':
+        return '📖';
+      case 'story':
+        return '🌸';
+      case 'announcement':
+        return '📢';
+      default:
+        return '✨';
     }
   };
 
@@ -89,8 +154,8 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({
             ? 'bg-pink-100 dark:bg-stone-700 text-pink-700 dark:text-pink-300 shadow-xs'
             : 'text-stone-600 dark:text-stone-300 hover:text-pink-600 dark:hover:text-pink-300 hover:bg-pink-50 dark:hover:bg-stone-800'
         }`}
-        title="Thông báo tương tác từ độc giả"
-        aria-label="Thông báo tương tác"
+        title={isInternal ? 'Thông báo nội bộ & Tương tác độc giả' : 'Thông báo truyện mới & Cập nhật'}
+        aria-label="Thông báo"
       >
         <Bell className={`w-4 h-4 ${unreadCount > 0 ? 'animate-wiggle' : ''}`} />
 
@@ -115,7 +180,7 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({
                 <Bell className="w-3.5 h-3.5" />
               </div>
               <span className="font-serif text-xs font-bold text-stone-900 dark:text-stone-100">
-                Thông báo Tương tác
+                {isInternal ? 'Thông báo Quản trị & Tương tác' : 'Thông báo & Cập nhật mới'}
               </span>
               {unreadCount > 0 && (
                 <span className="px-1.5 py-0.2 rounded-full bg-rose-100 dark:bg-rose-950 text-rose-600 dark:text-rose-300 text-[10px] font-mono font-bold">
@@ -127,7 +192,7 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({
             {unreadCount > 0 && (
               <button
                 type="button"
-                onClick={() => markAllNotificationsAsRead()}
+                onClick={() => markAllNotificationsAsRead(notifications, currentUid)}
                 className="text-[11px] text-pink-600 dark:text-pink-400 hover:text-pink-700 dark:hover:text-pink-300 font-medium flex items-center gap-1 cursor-pointer transition-colors"
                 title="Đánh dấu tất cả là đã đọc"
               >
@@ -137,12 +202,12 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({
             )}
           </div>
 
-          {/* Filter Chips */}
-          <div className="flex items-center gap-1.5 px-3.5 py-2 border-b border-stone-100 dark:border-stone-800 bg-white dark:bg-stone-900 text-xs">
+          {/* Filter Chips - Tailored specifically per Role */}
+          <div className="flex items-center gap-1.5 px-3.5 py-2 border-b border-stone-100 dark:border-stone-800 bg-white dark:bg-stone-900 text-xs overflow-x-auto scrollbar-none">
             <button
               type="button"
               onClick={() => setActiveFilter('all')}
-              className={`px-2.5 py-1 rounded-lg font-medium transition-colors cursor-pointer ${
+              className={`px-2.5 py-1 rounded-lg font-medium transition-colors cursor-pointer shrink-0 ${
                 activeFilter === 'all'
                   ? 'bg-pink-100 dark:bg-stone-800 text-pink-700 dark:text-pink-300 font-semibold'
                   : 'text-stone-500 hover:text-stone-800 dark:text-stone-400'
@@ -150,30 +215,74 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({
             >
               Tất cả ({notifications.length})
             </button>
-            <button
-              type="button"
-              onClick={() => setActiveFilter('comment')}
-              className={`px-2.5 py-1 rounded-lg font-medium flex items-center gap-1 transition-colors cursor-pointer ${
-                activeFilter === 'comment'
-                  ? 'bg-pink-100 dark:bg-stone-800 text-pink-700 dark:text-pink-300 font-semibold'
-                  : 'text-stone-500 hover:text-stone-800 dark:text-stone-400'
-              }`}
-            >
-              <MessageSquare className="w-3 h-3" />
-              <span>Bình luận</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => setActiveFilter('letter')}
-              className={`px-2.5 py-1 rounded-lg font-medium flex items-center gap-1 transition-colors cursor-pointer ${
-                activeFilter === 'letter'
-                  ? 'bg-pink-100 dark:bg-stone-800 text-pink-700 dark:text-pink-300 font-semibold'
-                  : 'text-stone-500 hover:text-stone-800 dark:text-stone-400'
-              }`}
-            >
-              <Mail className="w-3 h-3" />
-              <span>Tâm thư</span>
-            </button>
+
+            {isInternal ? (
+              <>
+                <button
+                  type="button"
+                  onClick={() => setActiveFilter('comment')}
+                  className={`px-2.5 py-1 rounded-lg font-medium flex items-center gap-1 transition-colors cursor-pointer shrink-0 ${
+                    activeFilter === 'comment'
+                      ? 'bg-pink-100 dark:bg-stone-800 text-pink-700 dark:text-pink-300 font-semibold'
+                      : 'text-stone-500 hover:text-stone-800 dark:text-stone-400'
+                  }`}
+                >
+                  <MessageSquare className="w-3 h-3" />
+                  <span>Bình luận</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setActiveFilter('letter')}
+                  className={`px-2.5 py-1 rounded-lg font-medium flex items-center gap-1 transition-colors cursor-pointer shrink-0 ${
+                    activeFilter === 'letter'
+                      ? 'bg-pink-100 dark:bg-stone-800 text-pink-700 dark:text-pink-300 font-semibold'
+                      : 'text-stone-500 hover:text-stone-800 dark:text-stone-400'
+                  }`}
+                >
+                  <Mail className="w-3 h-3" />
+                  <span>Tâm thư</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setActiveFilter('chapter')}
+                  className={`px-2.5 py-1 rounded-lg font-medium flex items-center gap-1 transition-colors cursor-pointer shrink-0 ${
+                    activeFilter === 'chapter'
+                      ? 'bg-pink-100 dark:bg-stone-800 text-pink-700 dark:text-pink-300 font-semibold'
+                      : 'text-stone-500 hover:text-stone-800 dark:text-stone-400'
+                  }`}
+                >
+                  <BookOpen className="w-3 h-3" />
+                  <span>Truyện & Chương</span>
+                </button>
+              </>
+            ) : (
+              <>
+                <button
+                  type="button"
+                  onClick={() => setActiveFilter('chapter')}
+                  className={`px-2.5 py-1 rounded-lg font-medium flex items-center gap-1 transition-colors cursor-pointer shrink-0 ${
+                    activeFilter === 'chapter'
+                      ? 'bg-pink-100 dark:bg-stone-800 text-pink-700 dark:text-pink-300 font-semibold'
+                      : 'text-stone-500 hover:text-stone-800 dark:text-stone-400'
+                  }`}
+                >
+                  <BookOpen className="w-3 h-3" />
+                  <span>Chương & Truyện mới</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setActiveFilter('reply')}
+                  className={`px-2.5 py-1 rounded-lg font-medium flex items-center gap-1 transition-colors cursor-pointer shrink-0 ${
+                    activeFilter === 'reply'
+                      ? 'bg-pink-100 dark:bg-stone-800 text-pink-700 dark:text-pink-300 font-semibold'
+                      : 'text-stone-500 hover:text-stone-800 dark:text-stone-400'
+                  }`}
+                >
+                  <MessageSquare className="w-3 h-3" />
+                  <span>Phản hồi & Bảng tin</span>
+                </button>
+              </>
+            )}
           </div>
 
           {/* Scrollable Notifications List */}
@@ -181,9 +290,11 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({
             {filteredItems.length === 0 ? (
               <div className="p-8 text-center text-stone-400 dark:text-stone-500 space-y-1.5">
                 <Sparkles className="w-8 h-8 mx-auto text-pink-300 dark:text-pink-700/60 stroke-[1.5]" />
-                <p className="text-xs">Chưa có thông báo tương tác mới.</p>
-                <p className="text-[10px] text-stone-400">
-                  Khi độc giả bình luận hoặc gửi thư, bạn sẽ nhận được thông báo tại đây tức thì!
+                <p className="text-xs">Chưa có thông báo mới.</p>
+                <p className="text-[10px] text-stone-400 max-w-xs mx-auto">
+                  {isInternal
+                    ? 'Khi độc giả gửi bình luận hoặc tâm thư, hệ thống sẽ báo ngay tại đây.'
+                    : 'Khi có chương truyện mới ra mắt hoặc tác giả phản hồi bình luận, bạn sẽ nhận được thông báo tại đây.'}
                 </p>
               </div>
             ) : (
@@ -203,10 +314,10 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({
                   {/* Avatar with Type Icon Badge */}
                   <div className="relative shrink-0">
                     <div className="w-8 h-8 rounded-full bg-pink-100 dark:bg-stone-750 text-pink-700 dark:text-pink-300 flex items-center justify-center text-sm shadow-2xs">
-                      {item.avatar || (item.type === 'comment' ? '🌸' : '💌')}
+                      {item.avatar || getBadgeEmoji(item.type)}
                     </div>
                     <span className="absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-700 flex items-center justify-center text-[9px]">
-                      {item.type === 'comment' ? '💬' : '💌'}
+                      {getBadgeEmoji(item.type)}
                     </span>
                   </div>
 
@@ -238,29 +349,51 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({
 
           {/* Footer Quick Links */}
           <div className="p-2.5 border-t border-stone-150 dark:border-stone-800 bg-stone-50/90 dark:bg-stone-850/90 flex items-center justify-between text-xs">
-            <button
-              type="button"
-              onClick={() => {
-                setIsOpen(false);
-                if (onOpenAuthorModal) onOpenAuthorModal('comments');
-              }}
-              className="text-pink-600 dark:text-pink-400 hover:text-pink-700 dark:hover:text-pink-300 font-semibold flex items-center gap-1 cursor-pointer"
-            >
-              <MessageSquare className="w-3.5 h-3.5" />
-              <span>Quản lý bình luận</span>
-            </button>
+            {isInternal ? (
+              <>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsOpen(false);
+                    if (onOpenAuthorModal) onOpenAuthorModal('comments');
+                  }}
+                  className="text-pink-600 dark:text-pink-400 hover:text-pink-700 dark:hover:text-pink-300 font-semibold flex items-center gap-1 cursor-pointer"
+                >
+                  <MessageSquare className="w-3.5 h-3.5" />
+                  <span>Quản lý bình luận</span>
+                </button>
 
-            <button
-              type="button"
-              onClick={() => {
-                setIsOpen(false);
-                if (onOpenAuthorModal) onOpenAuthorModal('letters');
-              }}
-              className="text-stone-600 dark:text-stone-300 hover:text-pink-600 font-medium flex items-center gap-1 cursor-pointer"
-            >
-              <Mail className="w-3.5 h-3.5" />
-              <span>Hòm thư Mel</span>
-            </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsOpen(false);
+                    if (onOpenAuthorModal) onOpenAuthorModal('letters');
+                  }}
+                  className="text-stone-600 dark:text-stone-300 hover:text-pink-600 font-medium flex items-center gap-1 cursor-pointer"
+                >
+                  <Mail className="w-3.5 h-3.5" />
+                  <span>Hòm thư Mel</span>
+                </button>
+              </>
+            ) : (
+              <>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsOpen(false);
+                    if (onNavigateToStory) onNavigateToStory('');
+                  }}
+                  className="text-pink-600 dark:text-pink-400 hover:text-pink-700 font-semibold flex items-center gap-1 cursor-pointer"
+                >
+                  <Compass className="w-3.5 h-3.5" />
+                  <span>Khám phá truyện mới</span>
+                </button>
+
+                <span className="text-[11px] text-stone-400 dark:text-stone-500 italic">
+                  Cập nhật liên tục 🌸
+                </span>
+              </>
+            )}
           </div>
         </div>
       )}

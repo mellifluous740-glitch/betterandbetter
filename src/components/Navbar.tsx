@@ -245,8 +245,8 @@ export const Navbar: React.FC<NavbarProps> = ({
         {/* 3. ACTION CONTROLS (INTEGRATED AUTHOR & ACCOUNT MENU, UTILITIES)     */}
         {/* =================================================================== */}
         <div id="navbar-action-controls" className="flex items-center gap-1.5 sm:gap-2 shrink-0">
-          {/* Realtime Notification Bell for Author & Collaborators */}
-          {(isAuthor || isCollaborator || user) && (
+          {/* Realtime Notification Bell - Strictly for Logged-In Users */}
+          {user && (
             <NotificationBell
               onOpenAuthorModal={onOpenAuthorModal}
               onNavigateToStory={onNavigateToStory}
