@@ -4657,6 +4657,8 @@ export const syncAllLocalToFirestore = async (): Promise<{
   storiesCount: number;
   chaptersCount: number;
   announcementsCount: number;
+  commentsCount?: number;
+  lettersCount?: number;
   error?: string;
 }> => {
   resetFirestoreQuotaExhaustion();
@@ -4706,11 +4708,46 @@ export const syncAllLocalToFirestore = async (): Promise<{
       announcementsCount++;
     }
 
+    // 4. Sync all local & cached comments
+    let commentsCount = 0;
+    try {
+      const allComments = getAllStoredComments();
+      for (const comment of allComments) {
+        if (!comment.id || isStoryDeleted(comment.storyId)) continue;
+        const commentRef = doc(db, 'comments', comment.id);
+        await setDoc(
+          commentRef,
+          sanitizeForFirestore({
+            ...comment,
+            userEmail: comment.userEmail || null,
+            userId: comment.userId || null,
+            roleBadge: comment.roleBadge || null,
+          }),
+          { merge: true }
+        ).catch(() => {});
+        commentsCount++;
+      }
+    } catch {}
+
+    // 5. Sync all local reader letters (excluding sample placeholders)
+    let lettersCount = 0;
+    try {
+      const allLetters = getStoredReaderLetters();
+      for (const letter of allLetters) {
+        if (!letter.id || letter.id.startsWith('sample-')) continue;
+        const letterRef = doc(db, 'reader_letters', letter.id);
+        await setDoc(letterRef, sanitizeForFirestore(letter), { merge: true }).catch(() => {});
+        lettersCount++;
+      }
+    } catch {}
+
     return {
       success: true,
       storiesCount,
       chaptersCount,
       announcementsCount,
+      commentsCount,
+      lettersCount,
     };
   } catch (err: any) {
     console.warn('Sync all to Firestore error:', err);

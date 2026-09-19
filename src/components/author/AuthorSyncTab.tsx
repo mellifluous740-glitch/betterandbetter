@@ -108,7 +108,7 @@ export const AuthorSyncTab: React.FC<AuthorSyncTabProps> = ({ onFeedback, onRefr
         setFirestoreActive(true);
         onFeedback(
           'success',
-          `Đã đồng bộ thành công ${res.storiesCount} tác phẩm, ${res.chaptersCount} chương và ${res.announcementsCount} thông báo lên Firestore!`
+          `Đã đồng bộ thành công ${res.storiesCount} tác phẩm, ${res.chaptersCount} chương, ${res.commentsCount || 0} bình luận và ${res.lettersCount || 0} tâm thư lên Firestore!`
         );
       } else {
         onFeedback(
